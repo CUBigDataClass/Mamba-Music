@@ -1,2 +1,2 @@
-# Mamba-Music
+# Mamba Music
 ML and Music.
