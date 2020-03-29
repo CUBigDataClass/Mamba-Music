@@ -1,5 +1,5 @@
 # Mamba Music
-ML and Music.
+A cloud based machine learning platform for creating music.
 
 Members:
 - [Aren Dalloul](https://github.com/adalloul0928)
