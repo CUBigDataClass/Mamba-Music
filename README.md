@@ -1,5 +1,5 @@
 # Mamba Music
-A cloud based machine learning platform for creating music.
+A cloud based machine learning platform for music generation, powered by Tensorflow's Magenta models.
 
 Members:
 - [Aren Dalloul](https://github.com/adalloul0928)
