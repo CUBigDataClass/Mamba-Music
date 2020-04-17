@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { SpotifyApiContext } from 'react-spotify-api';
+// import { SpotifyApiContext } from 'react-spotify-api';
 import Particles from 'react-particles-js';
 import Navigation from './components/Navigation/Navigation';
 import Logo from './components/Logo/Logo';
@@ -8,7 +8,12 @@ import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm';
 import Rank from './components/Rank/Rank';
 import Signin from './components/Signin/Signin.js'
 import Register from './components/Register/Register.js'
+import SpotifyAPI from './components/Spotify/SpotifyAPI.js'
 import './App.css';
+
+import Spotify from 'spotify-web-api-js';
+
+const spotifyWebApi = new Spotify();
 
 const particlesOptions = {
   particles: {
@@ -33,7 +38,7 @@ const initialState = {
       name: '',
       email: '',
       entries: 0,
-      joined: ''
+      joined: '',
     }
 }
 
@@ -41,6 +46,28 @@ class App extends Component {
   constructor() {
     super();
     this.state = initialState;
+  }
+
+  getHashParams = () => {
+    var hashParams = {};
+    var e, r = /([^&;=]+)=?([^&;]*)/g,
+        q = window.location.hash.substring(1);
+    while ( e = r.exec(q)) {
+       hashParams[e[1]] = decodeURIComponent(e[2]);
+    }
+    return hashParams;
+  }
+
+  getNowPlaying = () => {
+    spotifyWebApi.getMyCurrentPlaybackState()
+      .then((response) => {
+        this.setState({
+          nowPlaying: {
+            name: response.item.name,
+            image: response.item.album.images[0].url
+          }
+        })
+      })
   }
 
   loadUser = (data) => {
@@ -78,7 +105,7 @@ class App extends Component {
   onButtonSubmit = () => {
     this.setState({imageUrl: this.state.input})
       console.log("click");
-      fetch('https://powerful-thicket-36340.herokuapp.com/imageurl', {
+      fetch('http://localhost:3000/imageurl', {
         method: 'post',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -88,7 +115,7 @@ class App extends Component {
       .then(response => response.json())
       .then(response => {
         if (response){
-          fetch('https://powerful-thicket-36340.herokuapp.com/image', {
+          fetch('http://localhost:3000/image', {
             method: 'put',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -133,6 +160,7 @@ class App extends Component {
                 onInputChange={this.onInputChange}
                 onButtonSubmit={this.onButtonSubmit}/>
               <FaceRecognition box={box} imageUrl={imageUrl}/>
+              <SpotifyAPI getHashParams={this.getHashParams} getNowPlaying={this.getNowPlaying} spotifyWebApi={spotifyWebApi}/>
             </div>
             : (
               this.state.route === 'signin'
