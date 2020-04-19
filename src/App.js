@@ -11,10 +11,6 @@ import Register from './components/Register/Register.js'
 import SpotifyAPI from './components/Spotify/SpotifyAPI.js'
 import './App.css';
 
-import Spotify from 'spotify-web-api-js';
-
-const spotifyWebApi = new Spotify();
-
 const particlesOptions = {
   particles: {
     number: {
@@ -42,32 +38,31 @@ const initialState = {
     }
 }
 
+const saveStateLocalStorage = (state) => {
+  const serializedState = JSON.stringify(state);
+  localStorage.setItem('state', serializedState);
+  console.log("SAVE STATE");
+  console.log(serializedState);
+}
+
+const loadStateLocalStorage = () => {
+  const serializedState = localStorage.getItem('state');
+  if (serializedState === null) return undefined;
+  console.log("LOAD STATE");
+  console.log(serializedState);
+  return JSON.parse(serializedState);
+}
+
 class App extends Component {
+
   constructor() {
     super();
-    this.state = initialState;
-  }
-
-  getHashParams = () => {
-    var hashParams = {};
-    var e, r = /([^&;=]+)=?([^&;]*)/g,
-        q = window.location.hash.substring(1);
-    while ( e = r.exec(q)) {
-       hashParams[e[1]] = decodeURIComponent(e[2]);
+    const currState = loadStateLocalStorage();
+    if (currState === undefined){
+      this.state = initialState;
+    }else{
+      this.state = currState;
     }
-    return hashParams;
-  }
-
-  getNowPlaying = () => {
-    spotifyWebApi.getMyCurrentPlaybackState()
-      .then((response) => {
-        this.setState({
-          nowPlaying: {
-            name: response.item.name,
-            image: response.item.album.images[0].url
-          }
-        })
-      })
   }
 
   loadUser = (data) => {
@@ -78,6 +73,7 @@ class App extends Component {
       entries: data.entries,
       joined: data.joined
     }})
+    saveStateLocalStorage(this.state);
   }
 
   calculateFaceLocation = (data) => {
@@ -96,10 +92,12 @@ class App extends Component {
   displayFaceBox = (box) => {
     console.log(box);
     this.setState({box: box});
+    saveStateLocalStorage(this.state);
   }
 
   onInputChange = (event) => {
     this.setState({input: event.target.value});
+    saveStateLocalStorage(this.state);
   }
 
   onButtonSubmit = () => {
@@ -131,6 +129,7 @@ class App extends Component {
         this.displayFaceBox(this.calculateFaceLocation(response))
       })
       .catch(err => console.log(err));
+      saveStateLocalStorage(this.state);
   }
 
   onRouteChange = (route) => {
@@ -138,16 +137,17 @@ class App extends Component {
       this.setState(initialState)
       this.setState({route: 'signin'})
       window.location.reload(false);
+      localStorage.removeItem('state');
       return
     } else if (route === 'home'){
       this.setState({isSignedIn: true})
     }
     this.setState({route: route});
+    saveStateLocalStorage(this.state);
   }
 
   render() {
     const { isSignedIn, imageUrl, route, box } = this.state;
-    console.log(this.state);
     return (
       <div className="App">
       <Particles className='particles'
@@ -161,7 +161,7 @@ class App extends Component {
                 onInputChange={this.onInputChange}
                 onButtonSubmit={this.onButtonSubmit}/>
               <FaceRecognition box={box} imageUrl={imageUrl}/>
-              <SpotifyAPI getHashParams={this.getHashParams} getNowPlaying={this.getNowPlaying} spotifyWebApi={spotifyWebApi}/>
+              <SpotifyAPI/>
             </div>
             : (
               this.state.route === 'signin'
