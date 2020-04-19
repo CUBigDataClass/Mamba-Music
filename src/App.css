@@ -2,7 +2,28 @@
   text-align: center;
 }
 
+.login {
+  display: grid;
+  grid-template-columns: 30% auto;
+  grid-template-rows: auto 30px 30px;
+  grid-template-areas: "top top"
+                       "sidebar main"
+                       "bottom bottom"
+}
+
+.imagelinkform{
+  grid-area: bottom;
+}
+
+.header{
+  grid-area: top;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+}
+
 .center {
+  padding-top: 16px;
   display: flex;
   justify-content: center;
 }

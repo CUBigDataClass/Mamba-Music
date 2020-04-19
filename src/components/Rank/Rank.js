@@ -4,9 +4,9 @@ const Rank = ({name, entries}) => {
   return (
     <div>
       <div className='white f3'>
-        {`${name}, your current upload count is...`}
+        {`${name} current upload:`}
       </div>
-      <div className='white f1'>
+      <div className='white f3'>
         {entries}
       </div>
     </div>

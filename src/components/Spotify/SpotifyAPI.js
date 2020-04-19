@@ -27,6 +27,13 @@ class SpotifyAPI extends React.Component{
       })
   }
 
+  pauseMusic = () => {
+    spotifyWebApi.pause()
+      .then((response) => {
+        console.log(response);
+      })
+  }
+
   constructor(props){
     super(props);
     // const { getHashParams, getNowPlaying, spotifyWebApi } = this.props;
@@ -50,12 +57,15 @@ class SpotifyAPI extends React.Component{
         <a href='http://localhost:3000/login'>
           <button> Login With Spotify</button>
         </a>
-        <div> Now Playing: { this.state.nowPlaying.name } </div>
+        <div className="f4 pa2 w-70 white center"> Now Playing: { this.state.nowPlaying.name } </div>
         <div>
           <img src={ this.state.nowPlaying.image } style={{width: 100}} />
         </div>
         <button onClick={() => this.getNowPlaying()}>
           Check Now Playing
+        </button>
+        <button onClick={() => this.pauseMusic()}>
+          Pause Music
         </button>
       </div>
     );
