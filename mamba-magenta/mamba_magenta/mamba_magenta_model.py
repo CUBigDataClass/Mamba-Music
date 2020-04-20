@@ -4,9 +4,9 @@ import numpy as np
 import os
 import yaml
 import argparse
-from utils import parse_arguments
 
 from magenta.music.protobuf import music_pb2
+import magenta.music as mm
 
 
 class MambaMagentaModel():
@@ -57,6 +57,12 @@ class MambaMagentaModel():
             self.sequence.notes.add(pitch=midi_num, start_time=row[1], end_time=row[2], velocity=velocity)
         self.sequence.total_time = self.time
         self.sequence.tempos.add(qpm=self.tempo)
+
+    def sequence2mid(self):
+        if hasattr(self, 'sequence'):
+            mm.sequence_proto_to_midi_file(self.sequence, 'model.mid')
+        else:
+            print("No sequence exists.")
 
     def play(self):
         pass
@@ -132,6 +138,4 @@ class MambaMagentaModel():
             running_length = len(dictionary[key])
 
 
-if __name__ == '__main__':
-    args = parse_arguments()
-    m = MambaMagentaModel(args)
+

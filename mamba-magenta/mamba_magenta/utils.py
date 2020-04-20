@@ -1,6 +1,5 @@
 import argparse
 
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Argument Parse for Mamba Magenta Models.')
     parser.add_argument('-m', '--model', type=str, default='melody-rnn',
