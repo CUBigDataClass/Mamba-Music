@@ -136,6 +136,3 @@ class MambaMagentaModel():
                 running_length = len(dictionary[key])
             assert len(dictionary[key]) == running_length, "List lengths must match."
             running_length = len(dictionary[key])
-
-
-
