@@ -96,10 +96,6 @@ class MelodyRNN(MambaMagentaModel):
 
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
-    def __call__(self, x):
-        # generate code
-        pass
-
 
 class PerformanceRNN(MambaMagentaModel):
     def __init__(self, args):
@@ -163,10 +159,6 @@ class PerformanceRNN(MambaMagentaModel):
 
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
-    def __call__(self, x):
-        # generate code
-        pass
-
 
 class PolyphonyRNN(MambaMagentaModel):
     def __init__(self, args):
@@ -224,12 +216,8 @@ class PolyphonyRNN(MambaMagentaModel):
         mm.sequence_proto_to_midi_file(sequence, 'songs/output.mid')
         fs = FluidSynth()
 
-
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
-    def __call__(self, x):
-        # generate code
-        pass
 
 class PianoRollRNNNade(MambaMagentaModel):
     def __init__(self, args):
@@ -288,12 +276,7 @@ class PianoRollRNNNade(MambaMagentaModel):
         mm.sequence_proto_to_midi_file(sequence, 'songs/output.mid')
         fs = FluidSynth()
 
-
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
-    def __call__(self, x):
-        # generate code
-        pass
 
 
 class ImprovRNN(MambaMagentaModel):
@@ -370,15 +353,6 @@ class ImprovRNN(MambaMagentaModel):
 
 
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
-    def __call__(self, x):
-        # generate code
-        pass
-
-
-
-
-
 
 class MusicVAE(MambaMagentaModel):
     def __init__(self, args):
@@ -476,9 +450,6 @@ class MusicVAE(MambaMagentaModel):
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
-    def __call__(self, x):
-        # generate code
-        pass
 
 
 class PianoPerformanceLanguageModelProblem(score2perf.Score2PerfProblem):
@@ -631,11 +602,6 @@ class MusicTransformer(MambaMagentaModel):
         mm.sequence_proto_to_midi_file(continuation_ns, 'songs/output.mid')
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
-    def __call__(self, x):
-        # generate code
-        pass
-
 
 class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
     @property
@@ -790,10 +756,6 @@ class MelodicMusicTransformer(MambaMagentaModel):
         mm.sequence_proto_to_midi_file(accompaniment_ns, 'songs/output.mid')
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
-
-    def __call__(self, x):
-        pass
 
 
 if __name__ == '__main__':

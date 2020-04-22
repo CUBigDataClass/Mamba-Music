@@ -1,4 +1,9 @@
 import argparse
+import magenta.music as mm
+
+from midi2audio import FluidSynth
+import os
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Argument Parse for Mamba Magenta Models.')
@@ -14,3 +19,18 @@ def parse_arguments():
                         help='Config file for a note sequence.')
 
     return parser.parse_args()
+
+
+def generated_sequence_2_mp3(self, seq, filename, dirs="songs"):
+    """
+    generates note sequence `seq` to an mp3 file, with the name
+    `filename` in directory(ies) `dir`.
+    """
+    song_path = os.path.join(dirs, filename)
+    # convert from note sequence to midi file.
+    mm.sequence_proto_to_midi_file(seq, f'{song_path}.mid')
+    fs = FluidSynth()
+
+    fs.midi_to_audio(f'{song_path}.mid', f'{song_path}.mp3')
+    # remove midi file for bookkeeping.
+    os.remove(f'{song_path}.mid')

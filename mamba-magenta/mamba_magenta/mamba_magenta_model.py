@@ -64,6 +64,7 @@ class MambaMagentaModel():
         else:
             print("No sequence exists.")
 
+
     def play(self):
         pass
 
