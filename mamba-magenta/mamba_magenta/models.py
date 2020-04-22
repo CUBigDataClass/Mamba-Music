@@ -625,7 +625,6 @@ class MusicTransformer(MambaMagentaModel):
                         sample_ids,
                         encoder=self.unconditional_encoders['targets'])
         ns = mm.midi_file_to_note_sequence(midi_filename)
-        print(ns)
         # Append continuation to primer.
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
@@ -758,7 +757,13 @@ class MelodicMusicTransformer(MambaMagentaModel):
                 67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
                 67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
                 60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT        
+                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT       
             ]
         }
 
@@ -770,7 +775,7 @@ class MelodicMusicTransformer(MambaMagentaModel):
                   for event in [e] + event_padding]
         self.inputs = self.melody_conditioned_encoders['inputs'].encode(
             ' '.join(str(e) for e in events))
-        melody_ns = mm.Melody(events).to_sequence(qpm=150)
+        melody_ns = mm.Melody(events).to_sequence(qpm=160)
 
         self.decode_length = 4096
         sample_ids = next(self.melody_conditioned_samples)['outputs']
@@ -781,9 +786,8 @@ class MelodicMusicTransformer(MambaMagentaModel):
             encoder=self.melody_conditioned_encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        continuation_ns = mm.concatenate_sequences([melody_ns, accompaniment_ns])
 
-        mm.sequence_proto_to_midi_file(continuation_ns, 'songs/output.mid')
+        mm.sequence_proto_to_midi_file(accompaniment_ns, 'songs/output.mid')
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
