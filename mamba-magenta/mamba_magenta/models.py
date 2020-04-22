@@ -638,7 +638,10 @@ class MusicTransformer(MambaMagentaModel):
         pass
 
 
-
+class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
+    @property
+    def add_eos_symbol(self):
+        return True
 
 
 class MelodicMusicTransformer(MambaMagentaModel):
@@ -688,8 +691,9 @@ class MelodicMusicTransformer(MambaMagentaModel):
         self.hparams_set = 'transformer_tpu'
         self.ckpt_path = 'models/checkpoints/melody_conditioned_model_16.ckpt'
 
-        problem = PianoPerformanceLanguageModelProblem()
-        self.unconditional_encoders = problem.get_feature_encoders()
+        problem = MelodyToPianoPerformanceProblem()
+        self.melody_conditioned_encoders = problem.get_feature_encoders()
+
 
         # Set up HParams.
         hparams = trainer_lib.create_hparams(hparams_set=self.hparams_set)
@@ -701,7 +705,7 @@ class MelodicMusicTransformer(MambaMagentaModel):
         decode_hparams = decoding.decode_hparams()
         decode_hparams.alpha = 0.0
         decode_hparams.beam_size = 1
-        self.targets = []
+        self.inputs = []
         self.decode_length = 0
         run_config = trainer_lib.create_run_config(hparams)
         estimator = trainer_lib.create_estimator(
@@ -709,105 +713,86 @@ class MelodicMusicTransformer(MambaMagentaModel):
             decode_hparams=decode_hparams)
 
         input_fn = decoding.make_input_fn_from_generator(self.input_generator())
-        self.unconditional_samples = estimator.predict(
+        self.melody_conditioned_samples = estimator.predict(
             input_fn, checkpoint_path=self.ckpt_path)
-        _ = next(self.unconditional_samples)
+        _ = next(self.melody_conditioned_samples)
 
     def input_generator(self):
         while True:
             yield {
-                'targets': np.array([self.targets], dtype=np.int32),
+                'inputs': np.array([[self.inputs]], dtype=np.int32),
+                'targets': np.zeros([1, 0], dtype=np.int32),
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
 
     def generate(self, empty=False):
-        self.targets = []
-        self.decode_length = 1024
+        event_padding = 2 * [mm.MELODY_NO_EVENT]
 
-        # Generate sample events.
-        sample_ids = next(self.unconditional_samples)['outputs']
+        melodies = {
+            'Mary Had a Little Lamb': [
+                64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
+                62, 62, 62, mm.MELODY_NO_EVENT,
+                64, 67, 67, mm.MELODY_NO_EVENT,
+                64, 62, 60, 62, 64, 64, 64, 64,
+                62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
+                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+            ],
+            'Row Row Row Your Boat': [
+                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                60, mm.MELODY_NO_EVENT, 62,
+                64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                64, mm.MELODY_NO_EVENT, 62,
+                64, mm.MELODY_NO_EVENT, 65,
+                67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
+                67, mm.MELODY_NO_EVENT, 65,
+                64, mm.MELODY_NO_EVENT, 62,
+                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+            ],
+            'Twinkle Twinkle Little Star': [
+                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT        
+            ]
+        }
+
+        melody = 'Twinkle Twinkle Little Star'
+
+        # Use one of the provided melodies.
+        events = [event + 12 if event != mm.MELODY_NO_EVENT else event
+                  for e in melodies[melody]
+                  for event in [e] + event_padding]
+        self.inputs = self.melody_conditioned_encoders['inputs'].encode(
+            ' '.join(str(e) for e in events))
+        melody_ns = mm.Melody(events).to_sequence(qpm=150)
+
+        self.decode_length = 4096
+        sample_ids = next(self.melody_conditioned_samples)['outputs']
 
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,
-            encoder=self.unconditional_encoders['targets'])
-        unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
+            encoder=self.melody_conditioned_encoders['targets'])
+        accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        mm.sequence_proto_to_midi_file(unconditional_ns, 'songs/output.mid')
-        fs = FluidSynth()
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
-    def generate_primer(self):
-        """
-        Put something important here.
-        
-        """
-        filenames = {
-            'C major arpeggio': 'models/primers/c_major_arpeggio.mid',
-            'C major scale': 'models/primers/c_major_scale.mid',
-            'Clair de Lune': 'models/content/primers/clair_de_lune.mid',
-        }
-        primer = 'C major scale'
-        primer_ns = mm.midi_file_to_note_sequence(filenames[primer])
-        primer_ns = mm.apply_sustain_control_changes(primer_ns)
-        max_primer_seconds = 20
-        if primer_ns.total_time > max_primer_seconds:
-            print(f'Primer is longer than {max_primer_seconds} seconds, truncating.')
-            primer_ns = mm.extract_subsequence(
-                primer_ns, 0, max_primer_seconds)
-        if any(note.is_drum for note in primer_ns.notes):
-            print('Primer contains drums; they will be removed.')
-            notes = [note for note in primer_ns.notes if not note.is_drum]
-            del primer_ns.notes[:]
-            primer_ns.notes.extend(notes)
-        for note in primer_ns.notes:
-            # make into piano
-            note.instrument = 1
-            note.program = 0
-
-        self.targets = self.unconditional_encoders['targets'].encode_note_sequence(
-                        primer_ns)
-        # Remove the end token from the encoded primer.
-        self.targets = self.targets[:-1]
-        self.decode_length = max(0, 4096 - len(self.targets))
-        if len(self.targets) >= 4096:
-            print('Primer has more events than maximum sequence length; nothing will be generated.')
-        # Generate sample events.
-        sample_ids = next(self.unconditional_samples)['outputs']
-
-        midi_filename = self.decode(
-                        sample_ids,
-                        encoder=self.unconditional_encoders['targets'])
-        ns = mm.midi_file_to_note_sequence(midi_filename)
-        print(ns)
-        # Append continuation to primer.
-        continuation_ns = mm.concatenate_sequences([primer_ns, ns])
+        continuation_ns = mm.concatenate_sequences([melody_ns, accompaniment_ns])
 
         mm.sequence_proto_to_midi_file(continuation_ns, 'songs/output.mid')
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
+
     def __call__(self, x):
-        # generate code
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
     args = parse_arguments()
-    model = MusicTransformer(args)
-    model.generate_primer()
+    model = MelodicMusicTransformer(args)
+    model.generate()
