@@ -5,8 +5,10 @@ import os
 import yaml
 import argparse
 
-from magenta.music.protobuf import music_pb2
+from magenta.music.protobuf import generator_pb2, music_pb2
+from magenta.models.shared import sequence_generator_bundle
 import magenta.music as mm
+import utils
 
 
 class MambaMagentaModel():
@@ -29,6 +31,7 @@ class MambaMagentaModel():
         # parse midis or notes for a sequence config
         # convert midi data to sequences that magenta can read.
         self.convert_to_sequence()
+        self.counter = 0
 
     def convert_mp3(self, filename, to_mp3=True):
         """
@@ -64,9 +67,54 @@ class MambaMagentaModel():
         else:
             print("No sequence exists.")
 
+    def get_standard_model(self, model_string, model_filename, options):
+        """
+        Gets the standard model.
+        """
+        if model_string not in options:
+            raise ValueError(f"Wrong model string provided. Choose from {options}.")
+        else:
+            os.chdir("models")
+            if os.path.isfile(f"{model_filename}.mag"):
+                print("mag file already exists!")
+            else:
+                os.system(f"wget http://download.magenta.tensorflow.org/models/{model_filename}.mag")
+            self.model_name = model_filename
+            os.chdir("..")
 
-    def play(self):
-        pass
+    def initialize(self, name, sequence_generator):
+        """
+        Initializes the standard model.
+        """
+        print("Initializing {name}...")
+        bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
+        generator_map = sequence_generator.get_generator_map()
+        self.model = generator_map[self.model_name](checkpoint=None, bundle=bundle)
+
+        self.model.initialize()
+
+    def generate(self, num_steps=128, temperature=1.0, empty=False):
+        """
+        generates a song.
+        """
+        input_sequence = self.sequence
+        last_end_time = (max(n.end_time for n in input_sequence.notes)
+                         if input_sequence.notes else 0)
+        qpm = input_sequence.tempos[0].qpm
+        seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+
+        total_seconds = num_steps * seconds_per_step
+
+        generator_options = generator_pb2.GeneratorOptions()
+        generator_options.args['temperature'].float_value = temperature
+
+        generate_section = generator_options.generate_sections.add(
+            start_time=last_end_time + seconds_per_step,
+            end_time=total_seconds)
+
+        self.output_sequence = self.model.generate(input_sequence, generator_options)
+
+        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{self.counter}")
 
     def parse_yaml(self, config_dir, config_filename):
         """

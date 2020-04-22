@@ -21,7 +21,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def generated_sequence_2_mp3(self, seq, filename, dirs="songs"):
+def generated_sequence_2_mp3(seq, filename, dirs="songs"):
     """
     generates note sequence `seq` to an mp3 file, with the name
     `filename` in directory(ies) `dir`.
