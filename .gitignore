@@ -1,2 +1,5 @@
 node_modules
 *.mid
+__pycache__/
+*.py[cod]
+*$py.class
