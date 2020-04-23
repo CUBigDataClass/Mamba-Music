@@ -34,6 +34,13 @@ class SpotifyAPI extends React.Component{
       })
   }
 
+  nextSong = () => {
+  }
+
+  prevSong = () => {
+  }
+
+
   constructor(props){
     super(props);
     // const { getHashParams, getNowPlaying, spotifyWebApi } = this.props;
@@ -54,18 +61,26 @@ class SpotifyAPI extends React.Component{
   render(){
     return(
       <div className="Spotify">
+      <h1>
         <a href='http://localhost:3000/login'>
           <button> Login With Spotify</button>
-        </a>
+        </a> </h1>
         <div className="f4 pa2 w-70 white center"> Now Playing: { this.state.nowPlaying.name } </div>
         <div>
           <img src={ this.state.nowPlaying.image } style={{width: 100}} />
         </div>
+        <h1>
         <button onClick={() => this.getNowPlaying()}>
           Check Now Playing
-        </button>
+        </button></h1>
+        <button onClick={() => this.prevSong()}>
+          Prev
+        </button>        
         <button onClick={() => this.pauseMusic()}>
-          Pause Music
+          Pause
+        </button>
+        <button onClick={() => this.nextSong()}>
+          Next
         </button>
       </div>
     );

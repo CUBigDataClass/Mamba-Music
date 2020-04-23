@@ -27,8 +27,8 @@ const initialState = {
     input: '',
     ImageUrl: '',
     box: {},
-    route: 'signin',
-    isSignedIn: false,
+    route: 'home',
+    isSignedIn: true,
     user: {
       id: '',
       name: '',
@@ -165,11 +165,13 @@ class App extends Component {
                 <div className="rank">
                   <Rank name={this.state.user.name} entries={this.state.user.entries}/>
                 </div>
+
                 <div className="imagelinkform">
                   <ImageLinkForm
                     onInputChange={this.onInputChange}
                     onButtonSubmit={this.onButtonSubmit}/>
                 </div>
+                
               {/*<FaceRecognition box={box} imageUrl={imageUrl}/>*/}
               <SpotifyAPI/>
             </div>
