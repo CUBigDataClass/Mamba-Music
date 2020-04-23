@@ -236,11 +236,11 @@ class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
 
 
 class MusicTransformer(MambaMagentaModel):
-    def __init__(self, args):
+    def __init__(self, args, is_conditioned=False):
         super(MusicTransformer, self).__init__(args)
         self.get_model()
 
-        self.initialize()
+        self.initialize(is_conditioned)
 
     def decode(self, ids, encoder):
         ids = list(ids)
@@ -277,11 +277,11 @@ class MusicTransformer(MambaMagentaModel):
 
         os.chdir("..")
 
-    def initialize(self, conditioned=False):
+    def initialize(self, is_conditioned=False):
         self.model_name = 'transformer'
         self.hparams_set = 'transformer_tpu'
-        self.conditioned = conditioned
-        if conditioned:
+        self.conditioned = is_conditioned
+        if self.conditioned:
             self.ckpt_path = 'models/checkpoints/melody_conditioned_model_16.ckpt'
             problem = MelodyToPianoPerformanceProblem()
         else:
@@ -300,7 +300,7 @@ class MusicTransformer(MambaMagentaModel):
         decode_hparams = decoding.decode_hparams()
         decode_hparams.alpha = 0.0
         decode_hparams.beam_size = 1
-        if conditioned:
+        if self.conditioned:
             self.inputs = []
         else:
             self.targets = []
@@ -310,26 +310,26 @@ class MusicTransformer(MambaMagentaModel):
         estimator = trainer_lib.create_estimator(
             self.model_name, hparams, run_config,
             decode_hparams=decode_hparams)
-
-        input_fn = decoding.make_input_fn_from_generator(self.input_generator())
+        fnc = self.input_generation_conditional if self.conditioned else self.input_generator_unconditional
+        input_fn = decoding.make_input_fn_from_generator(fnc())
         self.samples = estimator.predict(
             input_fn, checkpoint_path=self.ckpt_path)
         _ = next(self.samples)
 
-    def input_generator(self):
-        if self.conditioned:
-            generate_dict = {
-                'targets': np.array([self.targets], dtype=np.int32),
-                'decode_length': np.array(self.decode_length, dtype=np.int32)
-            }
-        else:
-            generate_dict = {
+    def input_generation_conditional(self):
+        while True:
+            yield {
                 'inputs': np.array([[self.inputs]], dtype=np.int32),
                 'targets': np.zeros([1, 0], dtype=np.int32),
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
+
+    def input_generator_unconditional(self):
         while True:
-            yield generate_dict
+            yield {
+                'targets': np.array([self.targets], dtype=np.int32),
+                'decode_length': np.array(self.decode_length, dtype=np.int32)
+            }
 
     def generate(self, empty=False):
         self.targets = []
@@ -337,13 +337,13 @@ class MusicTransformer(MambaMagentaModel):
 
         # Generate sample events.
         sample_ids = next(self.samples)['outputs']
-
+        print(sample_ids)
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-
+        print(unconditional_ns)
         generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
 
     def generate_primer(self, filename='C major scale'):
@@ -389,18 +389,16 @@ class MusicTransformer(MambaMagentaModel):
         if len(self.targets) >= 4096:
             print('Primer has more events than maximum sequence length; nothing will be generated.')
         # Generate sample events.
-        sample_ids = next(self.unconditional_samples)['outputs']
+        sample_ids = next(self.samples)['outputs']
 
         midi_filename = self.decode(
                         sample_ids,
-                        encoder=self.unconditional_encoders['targets'])
+                        encoder=self.encoders['targets'])
         ns = mm.midi_file_to_note_sequence(midi_filename)
         # Append continuation to primer.
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
-        mm.sequence_proto_to_midi_file(continuation_ns, 'songs/output.mid')
-        fs = FluidSynth()
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}")
 
     def generate_basic_notes(self, melody='Twinkle Twinkle Little Star', qpm=160):
         """
@@ -472,15 +470,10 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-
         generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}")
-
-
-
-
 
 
 if __name__ == '__main__':
     args = parse_arguments()
-    model = MusicVAE(args)
-    model.generate()
+    model = MusicTransformer(args, True)
+    model.generate_basic_notes()
