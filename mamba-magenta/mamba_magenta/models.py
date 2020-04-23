@@ -229,6 +229,12 @@ class PianoPerformanceLanguageModelProblem(score2perf.Score2PerfProblem):
         return True
 
 
+class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
+    @property
+    def add_eos_symbol(self):
+        return True
+
+
 class MusicTransformer(MambaMagentaModel):
     def __init__(self, args):
         super(MusicTransformer, self).__init__(args)
@@ -242,7 +248,7 @@ class MusicTransformer(MambaMagentaModel):
             ids = ids[:ids.index(text_encoder.EOS_ID)]
         return encoder.decode(ids)
 
-    def get_model(self, model_string="model"):
+    def get_model(self, model_string="music_transformer"):
 
         # models folder already exists with this repository.
         os.chdir("models")
@@ -271,25 +277,34 @@ class MusicTransformer(MambaMagentaModel):
 
         os.chdir("..")
 
-    def initialize(self):
+    def initialize(self, conditioned=False):
         self.model_name = 'transformer'
         self.hparams_set = 'transformer_tpu'
-        self.ckpt_path = 'models/checkpoints/unconditional_model_16.ckpt'
+        self.conditioned = conditioned
+        if conditioned:
+            self.ckpt_path = 'models/checkpoints/melody_conditioned_model_16.ckpt'
+            problem = MelodyToPianoPerformanceProblem()
+        else:
+            self.ckpt_path = 'models/checkpoints/unconditional_model_16.ckpt'
+            problem = PianoPerformanceLanguageModelProblem()
 
-        problem = PianoPerformanceLanguageModelProblem()
-        self.unconditional_encoders = problem.get_feature_encoders()
+        self.encoders = problem.get_feature_encoders()
 
-        # Set up HParams.
+        # Set up hyperparams
         hparams = trainer_lib.create_hparams(hparams_set=self.hparams_set)
         trainer_lib.add_problem_hparams(hparams, problem)
         hparams.num_hidden_layers = 16
         hparams.sampling_method = 'random'
 
-        # Set up decoding HParams.
+        # Set up decoding hyperparams
         decode_hparams = decoding.decode_hparams()
         decode_hparams.alpha = 0.0
         decode_hparams.beam_size = 1
-        self.targets = []
+        if conditioned:
+            self.inputs = []
+        else:
+            self.targets = []
+
         self.decode_length = 0
         run_config = trainer_lib.create_run_config(hparams)
         estimator = trainer_lib.create_estimator(
@@ -297,35 +312,41 @@ class MusicTransformer(MambaMagentaModel):
             decode_hparams=decode_hparams)
 
         input_fn = decoding.make_input_fn_from_generator(self.input_generator())
-        self.unconditional_samples = estimator.predict(
+        self.samples = estimator.predict(
             input_fn, checkpoint_path=self.ckpt_path)
-        _ = next(self.unconditional_samples)
+        _ = next(self.samples)
 
     def input_generator(self):
-        while True:
-            yield {
+        if self.conditioned:
+            generate_dict = {
                 'targets': np.array([self.targets], dtype=np.int32),
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
+        else:
+            generate_dict = {
+                'inputs': np.array([[self.inputs]], dtype=np.int32),
+                'targets': np.zeros([1, 0], dtype=np.int32),
+                'decode_length': np.array(self.decode_length, dtype=np.int32)
+            }
+        while True:
+            yield generate_dict
 
     def generate(self, empty=False):
         self.targets = []
         self.decode_length = 1024
 
         # Generate sample events.
-        sample_ids = next(self.unconditional_samples)['outputs']
+        sample_ids = next(self.samples)['outputs']
 
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,
-            encoder=self.unconditional_encoders['targets'])
+            encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        mm.sequence_proto_to_midi_file(unconditional_ns, 'songs/output.mid')
-        fs = FluidSynth()
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
 
-    def generate_primer(self):
+    def generate_primer(self, filename='C major scale'):
         """
         Put something important here.
 
@@ -333,27 +354,34 @@ class MusicTransformer(MambaMagentaModel):
         filenames = {
             'C major arpeggio': 'models/primers/c_major_arpeggio.mid',
             'C major scale': 'models/primers/c_major_scale.mid',
-            'Clair de Lune': 'models/content/primers/clair_de_lune.mid',
+            'Clair de Lune': 'models/primers/clair_de_lune.mid',
         }
-        primer = 'C major scale'
-        primer_ns = mm.midi_file_to_note_sequence(filenames[primer])
+        if filename not in filenames.keys():
+            keys2list = list(filenames.keys())
+            raise ValueError(f"Choose from {keys2list}")
+
+        primer_ns = mm.midi_file_to_note_sequence(filenames[filename])
         primer_ns = mm.apply_sustain_control_changes(primer_ns)
         max_primer_seconds = 20
+
         if primer_ns.total_time > max_primer_seconds:
             print(f'Primer is longer than {max_primer_seconds} seconds, truncating.')
+            # cut primer if it's too long
             primer_ns = mm.extract_subsequence(
                 primer_ns, 0, max_primer_seconds)
+
         if any(note.is_drum for note in primer_ns.notes):
             print('Primer contains drums; they will be removed.')
             notes = [note for note in primer_ns.notes if not note.is_drum]
             del primer_ns.notes[:]
             primer_ns.notes.extend(notes)
+
         for note in primer_ns.notes:
             # make into piano
             note.instrument = 1
             note.program = 0
 
-        self.targets = self.unconditional_encoders['targets'].encode_note_sequence(
+        self.targets = self.encoders['targets'].encode_note_sequence(
                         primer_ns)
         # Remove the end token from the encoded primer.
         self.targets = self.targets[:-1]
@@ -374,94 +402,13 @@ class MusicTransformer(MambaMagentaModel):
         fs = FluidSynth()
         fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
 
-class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
-    @property
-    def add_eos_symbol(self):
-        return True
+    def generate_basic_notes(self, melody='Twinkle Twinkle Little Star', qpm=160):
+        """
+        Requires melody conditioned model.
+        """
+        if not self.conditioned:
+            raise ValueError("Model should be conditioned!")
 
-
-class MelodicMusicTransformer(MambaMagentaModel):
-    def __init__(self, args):
-        super(MelodicMusicTransformer, self).__init__(args)
-        self.get_model()
-
-        self.initialize()
-
-    def decode(self, ids, encoder):
-        ids = list(ids)
-        if text_encoder.EOS_ID in ids:
-            ids = ids[:ids.index(text_encoder.EOS_ID)]
-        return encoder.decode(ids)
-
-    def get_model(self, model_string="model"):
-
-        # models folder already exists with this repository.
-        os.chdir("models")
-        dir_name = os.getcwd()
-        checkpoints_folder = os.path.join(dir_name, "checkpoints")
-        checkpoints_exist = os.path.exists(checkpoints_folder)
-        if checkpoints_exist:
-            files = os.listdir(checkpoints_folder)
-            checkpoint_files = ["melody_conditioned_model_16.ckpt.data-00000-of-00001",
-                                "melody_conditioned_model_16.ckpt.index",
-                                "melody_conditioned_model_16.ckpt.meta",
-                                "unconditional_model_16.ckpt.data-00000-of-00001",
-                                "unconditional_model_16.ckpt.index",
-                                "unconditional_model_16.ckpt.meta"]
-            set_len = len(set(files).intersection(set(checkpoint_files)))
-
-        # if the length of this is 6, no need to redownload checkpoints
-        model_found = checkpoints_exist and (set_len == 6)
-        if not model_found:
-            print("Getting checkpoints. Please wait..")
-            os.system(f"gsutil -q -m cp -r gs://magentadata/models/music_transformer/* {dir_name}")
-            print("Successfully retrieved all checkpoints")
-            self.model_name = f"{model_string}"
-        else:
-            print("Checkpoints already exist in model folder!")
-
-        os.chdir("..")
-
-    def initialize(self):
-        self.model_name = 'transformer'
-        self.hparams_set = 'transformer_tpu'
-        self.ckpt_path = 'models/checkpoints/melody_conditioned_model_16.ckpt'
-
-        problem = MelodyToPianoPerformanceProblem()
-        self.melody_conditioned_encoders = problem.get_feature_encoders()
-
-
-        # Set up HParams.
-        hparams = trainer_lib.create_hparams(hparams_set=self.hparams_set)
-        trainer_lib.add_problem_hparams(hparams, problem)
-        hparams.num_hidden_layers = 16
-        hparams.sampling_method = 'random'
-
-        # Set up decoding HParams.
-        decode_hparams = decoding.decode_hparams()
-        decode_hparams.alpha = 0.0
-        decode_hparams.beam_size = 1
-        self.inputs = []
-        self.decode_length = 0
-        run_config = trainer_lib.create_run_config(hparams)
-        estimator = trainer_lib.create_estimator(
-            self.model_name, hparams, run_config,
-            decode_hparams=decode_hparams)
-
-        input_fn = decoding.make_input_fn_from_generator(self.input_generator())
-        self.melody_conditioned_samples = estimator.predict(
-            input_fn, checkpoint_path=self.ckpt_path)
-        _ = next(self.melody_conditioned_samples)
-
-    def input_generator(self):
-        while True:
-            yield {
-                'inputs': np.array([[self.inputs]], dtype=np.int32),
-                'targets': np.zeros([1, 0], dtype=np.int32),
-                'decode_length': np.array(self.decode_length, dtype=np.int32)
-            }
-
-    def generate(self, empty=False):
         event_padding = 2 * [mm.MELODY_NO_EVENT]
 
         melodies = {
@@ -503,30 +450,34 @@ class MelodicMusicTransformer(MambaMagentaModel):
                 65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT       
             ]
         }
-
-        melody = 'Twinkle Twinkle Little Star'
+        if melody not in melodies.keys():
+            keys2list = list(melodies.keys())
+            raise ValueError(f"Choose from {keys2list}")
 
         # Use one of the provided melodies.
         events = [event + 12 if event != mm.MELODY_NO_EVENT else event
                   for e in melodies[melody]
                   for event in [e] + event_padding]
-        self.inputs = self.melody_conditioned_encoders['inputs'].encode(
+
+        self.inputs = self.encoders['inputs'].encode(
             ' '.join(str(e) for e in events))
         melody_ns = mm.Melody(events).to_sequence(qpm=160)
 
         self.decode_length = 4096
-        sample_ids = next(self.melody_conditioned_samples)['outputs']
+        sample_ids = next(self.samples)['outputs']
 
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,
-            encoder=self.melody_conditioned_encoders['targets'])
+            encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
 
-        mm.sequence_proto_to_midi_file(accompaniment_ns, 'songs/output.mid')
-        fs = FluidSynth()
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}")
+
+
+
+
 
 
 if __name__ == '__main__':
