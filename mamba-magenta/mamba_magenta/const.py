@@ -3,3 +3,4 @@ VERSION = 1
 ARTISTS = ['MelodyRNN', 'PerformanceRNN', 'PolyphonyRNN',
            'PianoRollRNNNade', 'ImprovRNN', 'MusicVAE', 'MusicTransformer']
 
+SPOTIFY_SEARCH_ENDPOINT = 'https://api.spotify.com/v1/search'
