@@ -50,186 +50,35 @@ class MelodyRNN(MambaMagentaModel):
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
         self.initialize("Melody RNN", melody_rnn_sequence_generator)
 
-class PerformanceRNN(MambaMagentaModel):
-    def __init__(self, args):
-        super(PerformanceRNN, self).__init__(args)
-        self.get_model()
-        self.initialize()
 
-    def get_model(self, model_string="performance_with_dynamics"):
+class PerformanceRNN(MambaMagentaModel):
+    def __init__(self, args, model_string="performance_with_dynamics"):
+        super(PerformanceRNN, self).__init__(args)
         options = ["performance", "performance_with_dynamics",
                    "performance_with_dynamics_and_modulo_encoding",
                    "density_conditioned_performance_with_dynamics",
                    "pitch_conditioned_performance_with_dynamics",
                    "multiconditioned_performance_with_dynamics"]
-        if model_string not in options:
-            raise ValueError(f"Wrong model string provided. Choose from {options}.")
-        else:
-            # models folder already exists with this repository.
-            os.chdir("models")
-            if os.path.isfile(f"{model_string}.mag"):
-                print("mag file already exists!")
-            else:
-                os.system(f"wget http://download.magenta.tensorflow.org/models/{model_string}.mag")
-            self.model_name = f"{model_string}"
-            os.chdir("..")
+        self.get_standard_model(model_string, model_string, options)
 
-    def initialize(self):
-
-        print("Initializing Performance RNN...")
-        bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
-        generator_map = performance_sequence_generator.get_generator_map()
-        self.performance_rnn = generator_map[self.model_name](checkpoint=None, bundle=bundle)
-        self.performance_rnn.initialize()
-
-    def generate(self, empty=False):
-
-        input_sequence = self.sequence
-        num_steps = 2560  # change this for shorter or longer sequences
-        temperature = 1.0
-        # Set the start time to begin on the next step after the last note ends.
-        last_end_time = (max(n.end_time for n in input_sequence.notes)
-                  if input_sequence.notes else 0)
-        qpm = input_sequence.tempos[0].qpm
-
-        seconds_per_step = 1 / self.performance_rnn.steps_per_second
-        total_seconds = num_steps * seconds_per_step
-
-        generator_options = generator_pb2.GeneratorOptions()
-        generator_options.args['temperature'].float_value = temperature
-
-        generate_section = generator_options.generate_sections.add(
-            start_time=last_end_time + seconds_per_step,
-            end_time=total_seconds)
-
-        sequence = self.performance_rnn.generate(input_sequence, generator_options)
-
-        # mm.play_sequence(sequence, mm.midi_synth.fluidsynth,
-        #          sf2_path='/tmp/Yamaha-C5-Salamander-JNv5.1.sf2')
-        mm.sequence_proto_to_midi_file(sequence, 'songs/output.mid')
-        fs = FluidSynth()
-
-
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        self.initialize("Performance RNN", performance_sequence_generator)
 
 
 class PolyphonyRNN(MambaMagentaModel):
-    def __init__(self, args):
+    def __init__(self, args, model_string="polyphony"):
         super(PolyphonyRNN, self).__init__(args)
-        self.get_model()
-        self.initialize()
-
-    def get_model(self, model_string="polyphony"):
-        if model_string != "polyphony":
-            raise ValueError(f"Wrong model string provided. Select polyphony.")
-
-        else:
-            # models folder already exists with this repository.
-            os.chdir("models")
-            if os.path.isfile(f"{model_string}_rnn.mag"):
-                print("mag file already exists!")
-            else:
-                os.system(f"wget http://download.magenta.tensorflow.org/models/{model_string}_rnn.mag")
-            self.model_name = f"{model_string}"
-            os.chdir("..")
-
-    def initialize(self):
-
-        print("Initializing Polyphony RNN...")
-        bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}_rnn.mag"))
-        generator_map = polyphony_sequence_generator.get_generator_map()
-        print(generator_map)
-        self.polyphony_rnn = generator_map[self.model_name](checkpoint=None, bundle=bundle)
-        self.polyphony_rnn.initialize()
-
-    def generate(self, empty=False):
-
-        input_sequence = self.sequence
-        num_steps = 128  # change this for shorter or longer sequences
-        temperature = 1.0
-        # Set the start time to begin on the next step after the last note ends.
-        last_end_time = (max(n.end_time for n in input_sequence.notes)
-                  if input_sequence.notes else 0)
-        qpm = input_sequence.tempos[0].qpm
-
-        seconds_per_step = 60.0 / qpm / self.polyphony_rnn.steps_per_quarter
-        total_seconds = num_steps * seconds_per_step
-
-        generator_options = generator_pb2.GeneratorOptions()
-        generator_options.args['temperature'].float_value = temperature
-
-        generate_section = generator_options.generate_sections.add(
-            start_time=last_end_time + seconds_per_step,
-            end_time=total_seconds)
-
-        sequence = self.polyphony_rnn.generate(input_sequence, generator_options)
-
-        # mm.play_sequence(sequence, mm.midi_synth.fluidsynth,
-        #          sf2_path='/tmp/Yamaha-C5-Salamander-JNv5.1.sf2')
-        mm.sequence_proto_to_midi_file(sequence, 'songs/output.mid')
-        fs = FluidSynth()
-
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        options = ["polyphony"]
+        self.get_standard_model(model_string, "polyphony_rnn", options)
+        self.model_name = "polyphony_rnn"
+        self.initialize("Polyphony RNN", polyphony_sequence_generator, "polyphony")
 
 
 class PianoRollRNNNade(MambaMagentaModel):
-    def __init__(self, args):
+    def __init__(self, args, model_string="pianoroll_rnn_nade"):
         super(PianoRollRNNNade, self).__init__(args)
-        self.get_model()
-        self.initialize()
-
-    def get_model(self, model_string="pianoroll_rnn_nade"):
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
-        if model_string not in options:
-            raise ValueError(f"Wrong model string provided. Select from {options}.")
-
-        else:
-            # models folder already exists with this repository.
-            os.chdir("models")
-            if os.path.isfile(f"{model_string}.mag"):
-                print("mag file already exists!")
-            else:
-                os.system(f"wget http://download.magenta.tensorflow.org/models/{model_string}.mag")
-            self.model_name = f"{model_string}"
-            os.chdir("..")
-
-    def initialize(self):
-
-        print("Initializing PianoRoll RNN Nade...")
-        bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
-        generator_map = pianoroll_rnn_nade_sequence_generator.get_generator_map()
-        print(generator_map)
-        self.pianoroll_rnn_nade = generator_map['rnn-nade_attn'](checkpoint=None, bundle=bundle)
-        self.pianoroll_rnn_nade.initialize()
-
-    def generate(self, empty=False):
-
-        input_sequence = self.sequence
-        num_steps = 256  # change this for shorter or longer sequences
-        temperature = 1.0
-        # Set the start time to begin on the next step after the last note ends.
-        last_end_time = (max(n.end_time for n in input_sequence.notes)
-                  if input_sequence.notes else 0)
-        qpm = input_sequence.tempos[0].qpm
-
-        seconds_per_step = 60.0 / qpm / self.pianoroll_rnn_nade.steps_per_quarter
-        total_seconds = num_steps * seconds_per_step
-
-        generator_options = generator_pb2.GeneratorOptions()
-        generator_options.args['temperature'].float_value = temperature
-
-        generate_section = generator_options.generate_sections.add(
-            start_time=last_end_time + seconds_per_step,
-            end_time=total_seconds)
-
-        sequence = self.pianoroll_rnn_nade.generate(input_sequence, generator_options)
-
-        # mm.play_sequence(sequence, mm.midi_synth.fluidsynth,
-        #          sf2_path='/tmp/Yamaha-C5-Salamander-JNv5.1.sf2')
-        mm.sequence_proto_to_midi_file(sequence, 'songs/output.mid')
-        fs = FluidSynth()
-
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
+        self.get_standard_model(model_string, model_string, options)
+        self.initialize("Pianroll RNN Nade", pianoroll_rnn_nade_sequence_generator, "rnn-nade_attn")
 
 
 class ImprovRNN(MambaMagentaModel):
@@ -510,7 +359,7 @@ class MusicTransformer(MambaMagentaModel):
     def generate_primer(self):
         """
         Put something important here.
-        
+
         """
         filenames = {
             'C major arpeggio': 'models/primers/c_major_arpeggio.mid',
@@ -713,5 +562,5 @@ class MelodicMusicTransformer(MambaMagentaModel):
 
 if __name__ == '__main__':
     args = parse_arguments()
-    model = MelodyRNN(args)
-    model.generate()
+    model = PianoRollRNNNade(args)
+    model.generate(num_steps=20000)

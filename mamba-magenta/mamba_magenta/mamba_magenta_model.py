@@ -82,18 +82,21 @@ class MambaMagentaModel():
             self.model_name = model_filename
             os.chdir("..")
 
-    def initialize(self, name, sequence_generator):
+    def initialize(self, name, sequence_generator, extra_name=None):
         """
         Initializes the standard model.
         """
         print("Initializing {name}...")
         bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
         generator_map = sequence_generator.get_generator_map()
+        if extra_name is not None:
+            self.model_name = extra_name
         self.model = generator_map[self.model_name](checkpoint=None, bundle=bundle)
 
         self.model.initialize()
 
-    def generate(self, num_steps=128, temperature=1.0, empty=False):
+    def generate(self, num_steps=128, temperature=1.0,
+                 steps_per_second_avail=False, empty=False):
         """
         generates a song.
         """
@@ -101,7 +104,10 @@ class MambaMagentaModel():
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                          if input_sequence.notes else 0)
         qpm = input_sequence.tempos[0].qpm
-        seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+        if steps_per_second_avail:
+            seconds_per_step = 1 / self.model.steps_per_second
+        else:
+            seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
 
         total_seconds = num_steps * seconds_per_step
 
