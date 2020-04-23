@@ -55,6 +55,11 @@ class MelodyRNN(MambaMagentaModel):
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
         self.initialize("Melody RNN", melody_rnn_sequence_generator)
 
+    def construct_from_info_dict(self):
+        """
+        constructs note sequence from provided info dictionary.
+        """
+        pass
 
 class PerformanceRNN(MambaMagentaModel):
     """
@@ -378,7 +383,6 @@ class MusicTransformer(MambaMagentaModel):
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-        print(unconditional_ns)
         generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
 
     def generate_primer(self, filename='C major scale'):

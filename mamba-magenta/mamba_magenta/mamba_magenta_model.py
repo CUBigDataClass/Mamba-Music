@@ -15,7 +15,7 @@ class MambaMagentaModel():
     """
     Can parse sequence of notes
     """
-    def __init__(self, args):
+    def __init__(self, args, info=None):
         """
         """
         # loads from argparseconfig
@@ -23,14 +23,24 @@ class MambaMagentaModel():
         if the user wants to load from a yaml file,
         it takes priority over loading via argparse args.
         """
-        if args.load_config:
+        if info is not None:
+            # info will be a dict with the essential information
+            self.tempo = info['tempo']
+            self.temperature = info['temperature']
+            # most important part - genre
+            self.genre = info['genre']
+            self.num_steps = info['num_steps']
+            self.velocity_variance = info['velocity_variance']
+
+        elif args.load_config:
             self.midis = self.parse_yaml(args.config_dir, args.config_file)
         else:
             # load from argparse
             self.midis = self.parse_notes_string(args.notes)
         # parse midis or notes for a sequence config
         # convert midi data to sequences that magenta can read.
-        self.convert_to_sequence()
+        if info is None:
+            self.convert_to_sequence()
         self.counter = 0
 
     def convert_mp3(self, filename, to_mp3=True):
@@ -102,6 +112,10 @@ class MambaMagentaModel():
         """
         generates a song.
         """
+        if hasattr(self, 'num_steps'):
+            num_steps = self.num_steps
+        if hasattr(self, 'temperature'):
+            temperature = self.temperature
 
         input_sequence = self.sequence
         last_end_time = (max(n.end_time for n in input_sequence.notes)
