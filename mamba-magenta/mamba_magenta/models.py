@@ -60,6 +60,14 @@ class MelodyRNN(MambaMagentaModel):
         constructs note sequence from provided info dictionary.
         """
         pass
+    #     {
+    #     'tempo': int
+    #     'temperature': int
+    #     'genre': str
+    #     'tempo': int
+    #     'velocity_variance': int
+    #     'num_steps': int
+    # }
 
 class PerformanceRNN(MambaMagentaModel):
     """
@@ -236,6 +244,9 @@ class MusicVAE(MambaMagentaModel):
         self.model = TrainedModel(
                         config, batch_size=BATCH_SIZE,
                         checkpoint_dir_or_path='models/model_chords_fb64.ckpt')
+
+    def x(self):
+        pass
 
     def generate(self, empty=False, chords=['C', 'G', 'A', 'E', 'C' 'G'],
                  num_bars=64, temperature=0.2):

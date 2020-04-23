@@ -180,7 +180,7 @@ class MambaMagentaModel():
             try:
                 midi_val = int(note)
                 # fill in start time, end time, and velocity as well
-                midis.append((midi_val, running_time, running_time+0.5, 80))
+                midis.append((midi_val, running_time, running_time + 0.5, 80))
                 running_time += 0.5
 
             except Exception as e:
