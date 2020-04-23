@@ -34,3 +34,33 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs"):
     fs.midi_to_audio(f'{song_path}.mid', f'{song_path}.mp3')
     # remove midi file for bookkeeping.
     os.remove(f'{song_path}.mid')
+
+def dict_2_note_seq(dict):
+    """
+    converts a dictionary (was originally json)
+    into a note sequence for later use.
+
+    Required keys:
+
+    - 'lol'
+    """
+    pass
+
+
+"""
+structure of json:
+
+{
+
+    'artist': str
+    'tempo': int
+    'temperature': int
+    'genre': str
+    'tempo': int
+    'velocity_variance': int
+}
+Genre is the most important aspect of this message. It isn't directly
+fed into the model, but affects the instrumentation and chordal structure.
+Some artists are lacking than others in the ability for variation, especially
+polyphonyrnn
+"""

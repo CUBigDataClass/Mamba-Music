@@ -43,6 +43,11 @@ SAMPLE_RATE = 44100
 
 
 class MelodyRNN(MambaMagentaModel):
+    """
+    MelodyRNN model
+    Generates a one line melody
+    with the input sequence as a primer.
+    """
     def __init__(self, args, model_string="basic"):
         super(MelodyRNN, self).__init__(args)
         options = ["basic", "mono", "lookback", "attention"]
@@ -52,6 +57,12 @@ class MelodyRNN(MambaMagentaModel):
 
 
 class PerformanceRNN(MambaMagentaModel):
+    """
+    PerformanceRNN model.
+    Somewhat akin to a non-noob fiddling on a piano.
+    Not super music, just playing around.
+
+    """
     def __init__(self, args, model_string="performance_with_dynamics"):
         super(PerformanceRNN, self).__init__(args)
         options = ["performance", "performance_with_dynamics",
@@ -65,6 +76,10 @@ class PerformanceRNN(MambaMagentaModel):
 
 
 class PolyphonyRNN(MambaMagentaModel):
+    """
+    Music slightly akin to Bach
+
+    """
     def __init__(self, args, model_string="polyphony"):
         super(PolyphonyRNN, self).__init__(args)
         options = ["polyphony"]
@@ -74,6 +89,9 @@ class PolyphonyRNN(MambaMagentaModel):
 
 
 class PianoRollRNNNade(MambaMagentaModel):
+    """
+    A bit of a more intriguing model.
+    """
     def __init__(self, args, model_string="pianoroll_rnn_nade"):
         super(PianoRollRNNNade, self).__init__(args)
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
@@ -82,17 +100,22 @@ class PianoRollRNNNade(MambaMagentaModel):
 
 
 class ImprovRNN(MambaMagentaModel):
+    """
+    improv rnn, which generates melodies underlying a
+    specific set of chords.
+    Requires both the chords and number of times to repeat those chords
+    (can be 1 though).
+    """
     def __init__(self, args, chords, model_string="chord_pitches_improv", phrases=4):
         super(ImprovRNN, self).__init__(args)
         options = ["chord_pitches_improv"]
         self.get_standard_model(model_string, model_string, options)
+        # chords must be a string; e.g., "A C E F Gm"
         raw_chords = chords.split()
         repeated_chords = [chord for chord in raw_chords
                            for _ in range(16)] * phrases
-        print(repeated_chords)
         self.backing_chords = mm.ChordProgression(repeated_chords)
 
-        # self.initialize()
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
 
     def generate(self, empty=False):
@@ -134,7 +157,12 @@ class ImprovRNN(MambaMagentaModel):
 
 class MusicVAE(MambaMagentaModel):
     """
-    Now this is a unique model.
+    Music Variational Autoencoder
+    Paper at: https://arxiv.org/abs/1803.05428
+
+    Now this is a unique model. And definitely the fan favorite.
+
+    Takes in chords, temperature, bars
     """
     def __init__(self, args):
         super(MusicVAE, self).__init__(args)
@@ -144,7 +172,8 @@ class MusicVAE(MambaMagentaModel):
 
     def slerp(self, p0, p1, t):
         """
-        Spherical linear interpolation in the latent space
+        Spherical linear interpolation in the latent space, will help decode
+        and generate the models later on.
         """
         omega = np.arccos(np.dot(np.squeeze(p0/np.linalg.norm(p0)), np.squeeze(p1/np.linalg.norm(p1))))
         so = np.sin(omega)
@@ -236,6 +265,12 @@ class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
 
 
 class MusicTransformer(MambaMagentaModel):
+    """
+    Music Transformer model.
+
+    Can be "primed" with a melody, and
+    helps provide accompaniment.
+    """
     def __init__(self, args, is_conditioned=False):
         super(MusicTransformer, self).__init__(args)
         self.get_model()

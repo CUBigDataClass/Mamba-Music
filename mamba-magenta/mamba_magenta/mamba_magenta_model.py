@@ -59,6 +59,7 @@ class MambaMagentaModel():
             velocity = int(row[3])
             self.sequence.notes.add(pitch=midi_num, start_time=row[1], end_time=row[2], velocity=velocity)
         self.sequence.total_time = self.time
+
         self.sequence.tempos.add(qpm=self.tempo)
 
     def sequence2mid(self):
@@ -88,6 +89,7 @@ class MambaMagentaModel():
         """
         print("Initializing {name}...")
         bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
+
         generator_map = sequence_generator.get_generator_map()
         if extra_name is not None:
             self.model_name = extra_name
@@ -100,6 +102,7 @@ class MambaMagentaModel():
         """
         generates a song.
         """
+
         input_sequence = self.sequence
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                          if input_sequence.notes else 0)
@@ -112,6 +115,7 @@ class MambaMagentaModel():
         total_seconds = num_steps * seconds_per_step
 
         generator_options = generator_pb2.GeneratorOptions()
+
         generator_options.args['temperature'].float_value = temperature
 
         generate_section = generator_options.generate_sections.add(
