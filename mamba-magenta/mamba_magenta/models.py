@@ -131,7 +131,11 @@ class ImprovRNN(MambaMagentaModel):
         renderer.render(sequence)
         generated_sequence_2_mp3(sequence, f"{self.model_name}{self.counter}")
 
+
 class MusicVAE(MambaMagentaModel):
+    """
+    Now this is a unique model.
+    """
     def __init__(self, args):
         super(MusicVAE, self).__init__(args)
         self.get_model()
@@ -139,17 +143,18 @@ class MusicVAE(MambaMagentaModel):
         self.initialize()
 
     def slerp(self, p0, p1, t):
-
-        """Spherical linear interpolation."""
+        """
+        Spherical linear interpolation in the latent space
+        """
         omega = np.arccos(np.dot(np.squeeze(p0/np.linalg.norm(p0)), np.squeeze(p1/np.linalg.norm(p1))))
         so = np.sin(omega)
-        return np.sin((1.0-t)*omega) / so * p0 + np.sin(t*omega)/so * p1
+        return np.sin((1.0 - t)*omega) / so * p0 + np.sin(t * omega)/so * p1
 
     def chord_encoding(self, chord):
         index = mm.TriadChordOneHotEncoding().encode_event(chord)
         c = np.zeros([TOTAL_STEPS, CHORD_DEPTH])
-        c[0,0] = 1.0
-        c[1:,index] = 1.0
+        c[0, 0] = 1.0
+        c[1:, index] = 1.0
         return c
 
     def fix_instruments_for_concatenation(self, note_sequences):
@@ -166,7 +171,7 @@ class MusicVAE(MambaMagentaModel):
                 else:
                     note.instrument = 9
 
-    def get_model(self, model_string="model"):
+    def get_model(self, model_string="music_vae"):
 
         # models folder already exists with this repository.
         os.chdir("models")
@@ -189,6 +194,7 @@ class MusicVAE(MambaMagentaModel):
             self.model_name = f"{model_string}"
         else:
             print("Checkpoints already exist in model folder!")
+            self.model_name = f"{model_string}"
         os.chdir("..")
 
     def initialize(self):
@@ -197,17 +203,9 @@ class MusicVAE(MambaMagentaModel):
                         config, batch_size=BATCH_SIZE,
                         checkpoint_dir_or_path='models/model_chords_fb64.ckpt')
 
-    def generate(self, empty=False):
-        #@title Style Interpolation, Repeating Chord Progression
-
-        chord_1 = 'Dm' #@param {type:"string"}
-        chord_2 = 'F' #@param {type:"string"}
-        chord_3 = 'Am' #@param {type:"string"}
-        chord_4 = 'G' #@param {type:"string"}
-        chords = [chord_1, chord_2, chord_3, chord_4]
-
-        num_bars = 32 #@param {type:"slider", min:4, max:64, step:4}
-        temperature = 0.2 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+    def generate(self, empty=False, chords=['C', 'G', 'A', 'E', 'C' 'G'],
+                 num_bars=64, temperature=0.2):
+        # Interpolation, Repeating Chord Progression
 
         z1 = np.random.normal(size=[Z_SIZE])
         z2 = np.random.normal(size=[Z_SIZE])
@@ -222,11 +220,7 @@ class MusicVAE(MambaMagentaModel):
 
         self.fix_instruments_for_concatenation(seqs)
         prog_ns = concatenate_sequences(seqs)
-
-        mm.sequence_proto_to_midi_file(prog_ns, 'songs/output.mid')
-        fs = FluidSynth()
-        fs.midi_to_audio('songs/output.mid', 'songs/output.mp3')
-
+        generated_sequence_2_mp3(prog_ns, f"{self.model_name}{self.counter}")
 
 
 class PianoPerformanceLanguageModelProblem(score2perf.Score2PerfProblem):
@@ -537,5 +531,5 @@ class MelodicMusicTransformer(MambaMagentaModel):
 
 if __name__ == '__main__':
     args = parse_arguments()
-    model = ImprovRNN(args, chords="A C E G")
+    model = MusicVAE(args)
     model.generate()
