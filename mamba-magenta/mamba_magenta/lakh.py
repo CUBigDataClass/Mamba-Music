@@ -7,7 +7,6 @@ import requests
 import const as C
 import pickle
 from utils import print_progress_bar
-# use spotify api to identify artists
 
 
 def get_spotify_bearer_token():
@@ -50,11 +49,28 @@ def get_genres(bearer_auth, artist_name='Beethoven'):
 
 
 class LokhDataset():
-    def __init__(self, bearer):
+    def __init__(self, bearer, already_scraped=False):
+        if already_scraped:
+            # check to see if the pickle file exists.
+            if os.path.isfile('genre_mappings.pickle'):
+                self.genre_mappings = pickle.load(open('genre_mappings.pickle', 'rb'))
+                self.loaded = True
+            else:
+                self.loaded = False
+        else:
+            self.genre_mappings = {}
+            self.loaded = False
+
         self.main_dir = 'data/clean_midi'
         self.get_cleaned_midis()
-        self.genre_mappings = {}
         self.bearer = bearer
+
+    def __getitem__(self, key):
+        return self.genre_mappings[key]
+
+    @property
+    def genres(self):
+        return list(self.genre_mappings.keys())
 
     def get_cleaned_midis(self):
         """
@@ -76,6 +92,9 @@ class LokhDataset():
             os.remove('data/{tarname}')
 
     def get_genres_from_folders(self, dir_name='clean_midi'):
+        if self.loaded:
+            print('Data is already loaded in self.genre_mappings.')
+            return
         d = {}
         artist_names = os.listdir(self.main_dir)
         num_names = len(artist_names)
@@ -110,6 +129,8 @@ class LokhDataset():
                 print_progress_bar(idx + 1, num_names, prefix = 'Progress:', suffix = 'Complete', length = 50)
         with open('genre_mappings.pickle', 'wb') as f:
             pickle.dump(self.genre_mappings, f)
+        self.loaded = True
+
 
 
 class BearerAuth(requests.auth.AuthBase):
@@ -128,5 +149,7 @@ if __name__ == '__main__':
     token = get_spotify_bearer_token()
     bearer = BearerAuth(token)
     # genres = get_genres(bearer)
-    data = LokhDataset(bearer)
+    data = LokhDataset(bearer, already_scraped=True)
     data.get_genres_from_folders()
+    print(data.genres)
+    print(data[data.genres[0]])
