@@ -29,9 +29,7 @@ class MambaMagentaModel():
             self.temperature = info['temperature']
             # most important part - genre
             self.sequence = info['sequence']
-            self.genre = info['genre']
             self.num_steps = info['num_steps']
-            self.velocity_variance = info['velocity_variance']
 
         elif args.load_config:
             self.midis = self.parse_yaml(args.config_dir, args.config_file)
@@ -117,18 +115,19 @@ class MambaMagentaModel():
             num_steps = self.num_steps
         if hasattr(self, 'temperature'):
             temperature = self.temperature
-
         input_sequence = self.sequence
+        if empty:
+            input_sequence = music_pb2.NoteSequence()
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                          if input_sequence.notes else 0)
-        qpm = input_sequence.tempos[0].qpm
+        qpm = input_sequence.tempos[0].qpm if not empty else 80
         if steps_per_second_avail:
             seconds_per_step = 1 / self.model.steps_per_second
         else:
             seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
 
         total_seconds = num_steps * seconds_per_step
-
+        input_sequence.total_time = min(total_seconds, input_sequence.total_time)
         generator_options = generator_pb2.GeneratorOptions()
 
         generator_options.args['temperature'].float_value = temperature

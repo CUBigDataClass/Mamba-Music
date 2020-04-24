@@ -11,6 +11,7 @@ from magenta.models.polyphony_rnn import polyphony_sequence_generator
 from magenta.models.pianoroll_rnn_nade import pianoroll_rnn_nade_sequence_generator
 from magenta.models.improv_rnn import improv_rnn_sequence_generator
 
+import copy
 
 import magenta.music as mm
 from midi2audio import FluidSynth
@@ -69,6 +70,7 @@ class MelodyRNN(MambaMagentaModel):
     #     'num_steps': int
     # }
 
+
 class PerformanceRNN(MambaMagentaModel):
     """
     PerformanceRNN model.
@@ -76,8 +78,8 @@ class PerformanceRNN(MambaMagentaModel):
     Not super music, just playing around.
 
     """
-    def __init__(self, args, model_string="performance_with_dynamics"):
-        super(PerformanceRNN, self).__init__(args)
+    def __init__(self, args, model_string="performance_with_dynamics", info=None):
+        super(PerformanceRNN, self).__init__(args, info=info)
         options = ["performance", "performance_with_dynamics",
                    "performance_with_dynamics_and_modulo_encoding",
                    "density_conditioned_performance_with_dynamics",
@@ -93,8 +95,8 @@ class PolyphonyRNN(MambaMagentaModel):
     Music slightly akin to Bach
 
     """
-    def __init__(self, args, model_string="polyphony"):
-        super(PolyphonyRNN, self).__init__(args)
+    def __init__(self, args, model_string="polyphony", info=None):
+        super(PolyphonyRNN, self).__init__(args, info=info)
         options = ["polyphony"]
         self.get_standard_model(model_string, "polyphony_rnn", options)
         self.model_name = "polyphony_rnn"
@@ -105,8 +107,8 @@ class PianoRollRNNNade(MambaMagentaModel):
     """
     A bit of a more intriguing model.
     """
-    def __init__(self, args, model_string="pianoroll_rnn_nade"):
-        super(PianoRollRNNNade, self).__init__(args)
+    def __init__(self, args, model_string="pianoroll_rnn_nade", info=None):
+        super(PianoRollRNNNade, self).__init__(args, info=info)
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
         self.get_standard_model(model_string, model_string, options)
         self.initialize("Pianroll RNN Nade", pianoroll_rnn_nade_sequence_generator, "rnn-nade_attn")
@@ -119,15 +121,18 @@ class ImprovRNN(MambaMagentaModel):
     Requires both the chords and number of times to repeat those chords
     (can be 1 though).
     """
-    def __init__(self, args, chords, model_string="chord_pitches_improv", phrases=4):
-        super(ImprovRNN, self).__init__(args)
+    def __init__(self, args, chords, model_string="chord_pitches_improv",
+                 phrase_num=4, info=None):
+        super(ImprovRNN, self).__init__(args, info=info)
         options = ["chord_pitches_improv"]
+        # mm.infer_chords_for_sequence()
+        self.phrase_num = 4
         self.get_standard_model(model_string, model_string, options)
         # chords must be a string; e.g., "A C E F Gm"
-        raw_chords = chords.split()
-        repeated_chords = [chord for chord in raw_chords
-                           for _ in range(16)] * phrases
-        self.backing_chords = mm.ChordProgression(repeated_chords)
+        # raw_chords = chords.split()
+        # repeated_chords = [chord for chord in raw_chords
+        #                    for _ in range(16)] * phrases
+        # self.backing_chords = mm.ChordProgression(repeated_chords)
 
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
 
@@ -136,25 +141,36 @@ class ImprovRNN(MambaMagentaModel):
         different implementation is needed for improv rnn's
         generation function.
         """
-        input_sequence = self.sequence
-        num_steps = 2560  # change this for shorter or longer sequences
+        input_sequence = copy.deepcopy(self.sequence)
+        num_steps = 25600  # change this for shorter or longer sequences
         temperature = 1.0
         # Set the start time to begin on the next step after the last note ends.
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                   if input_sequence.notes else 0)
         qpm = input_sequence.tempos[0].qpm
+        input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
+        mm.infer_chords_for_sequence(input_sequence)
+        raw_chord_string = ""
+        for annotation in input_sequence.text_annotations:
+            if annotation.annotation_type == CHORD_SYMBOL:
+                chord_name = annotation.text
+                raw_chord_string += f'{chord_name} '
 
+        raw_chord_string = raw_chord_string[:-1]
+        raw_chords = raw_chord_string.split()
+        repeated_chords = [chord for chord in raw_chords
+                           for _ in range(16)] * self.phrase_num
+        self.backing_chords = mm.ChordProgression(repeated_chords)
         chord_sequence = self.backing_chords.to_sequence(sequence_start_time=0.0, qpm=qpm)
-
         for text_annotation in chord_sequence.text_annotations:
             if text_annotation.annotation_type == CHORD_SYMBOL:
-                chord = input_sequence.text_annotations.add()
+                chord = self.sequence.text_annotations.add()
                 chord.CopyFrom(text_annotation)
+                print(text_annotation)
 
         seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
         total_seconds = len(self.backing_chords) * seconds_per_step
-        input_sequence.total_time = len(self.backing_chords) * seconds_per_step
-
+        self.sequence.total_time = total_seconds
         generator_options = generator_pb2.GeneratorOptions()
         generator_options.args['temperature'].float_value = temperature
 
@@ -162,7 +178,7 @@ class ImprovRNN(MambaMagentaModel):
             start_time=last_end_time + seconds_per_step,
             end_time=total_seconds)
 
-        sequence = self.model.generate(input_sequence, generator_options)
+        sequence = self.model.generate(self.sequence, generator_options)
         renderer = mm.BasicChordRenderer(velocity=CHORD_VELOCITY)
         renderer.render(sequence)
         generated_sequence_2_mp3(sequence, f"{self.model_name}{self.counter}")
