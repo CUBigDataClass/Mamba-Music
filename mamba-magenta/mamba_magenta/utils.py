@@ -7,6 +7,28 @@ from midi2audio import FluidSynth
 import os
 
 
+# from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+def print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
+    # Print New Line on Complete
+    if iteration == total:
+        print()
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Argument Parse for Mamba Magenta Models.')
     parser.add_argument('-m', '--model', type=str, default='melody-rnn',
@@ -37,43 +59,11 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs"):
     # remove midi file for bookkeeping.
     os.remove(f'{song_path}.mid')
 
-def genre_2_sequence(genre):
-    """
-    converts a genre to a basic sequence.
-    """
-    sequence = music_pb2.NoteSequence()
-    if genre == "classical":
-        pass
-    elif genre == "hip-hop  ":
-#         twinkle_twinkle.notes.add(pitch=60, start_time=0.0, end_time=0.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=60, start_time=0.5, end_time=1.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=67, start_time=1.0, end_time=1.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=67, start_time=1.5, end_time=2.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=69, start_time=2.0, end_time=2.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=69, start_time=2.5, end_time=3.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=67, start_time=3.0, end_time=4.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=65, start_time=4.0, end_time=4.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=65, start_time=4.5, end_time=5.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=64, start_time=5.0, end_time=5.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=64, start_time=5.5, end_time=6.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=62, start_time=6.0, end_time=6.5, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=62, start_time=6.5, end_time=7.0, velocity=80)
-#         twinkle_twinkle.notes.add(pitch=60, start_time=7.0, end_time=8.0, velocity=80) 
-#         twinkle_twinkle.total_time = 8
-
-# # 60 bpm!
-# twinkle_twinkle.tempos.add(qpm=60)
-
-#     elif genre == "x3":
+# def genre_2_sequence(genre):
+#     """
+#     converts a genre to a basic sequence.
+#     """
+#     sequence = music_pb2.NoteSequence()
+#     if genre == "classical":
 #         pass
-#     elif genre == "x4":
-#         pass
-#     elif genre == "x5":
-#         pass
-#     elif genre == "x6":
-#         pass
-#     elif genre == "x7p":
-#         pass
-#     elif genre == "x2":
-#         pass
-#     # mm.s/equn
+#     elif genre == "hip-hop  ":

@@ -5,6 +5,7 @@ import shutil
 import tarfile
 import requests
 import const as C
+from utils import print_progress_bar
 # use spotify api to identify artists
 
 
@@ -51,6 +52,7 @@ class LokhDataset():
     def __init__(self):
         self.main_dir = 'data/clean_midi'
         self.get_cleaned_midis()
+        self.genre_mappings = {}
 
     def get_cleaned_midis(self):
         """
@@ -74,10 +76,13 @@ class LokhDataset():
     def get_genres_from_folders(self, dir_name='clean_midi'):
         d = {}
         artist_names = os.listdir(self.main_dir)
-        for name in artist_names:
+        num_names = len(artist_names)
+        for idx, name in enumerate(artist_names):
             songs_dir = os.path.join(self.main_dir, name)
             if os.path.isdir(songs_dir):
-                num_songs = len(os.listdir(os.path.join(self.main_dir, name)))
+                songs = os.listdir(songs_dir)
+                for i in range(len(songs)):
+                    songs[i] = os.path.join(songs_dir, songs[i])
                 genres = get_genres(bearer, artist_name=name)
                 if len(genres) > 0:
                     main_genre = None
@@ -89,12 +94,17 @@ class LokhDataset():
                             main_genre = base_genre
 
                         if base_genre in d.keys():
+                            selected_genre = base_genre
                             d[base_genre] = d.get(base_genre, 0) + 1
                             filled = True
                             break
 
                     if not filled:
+                        selected_genre = base_genre
                         d[main_genre] = 1
+
+                self.genre_mappings[selected_genre] = self.genre_mappings.setdefault(selected_genre, []) + songs
+                print_progress_bar(idx + 1, num_names, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
 
 class BearerAuth(requests.auth.AuthBase):
@@ -112,7 +122,6 @@ class BearerAuth(requests.auth.AuthBase):
 if __name__ == '__main__':
     token = get_spotify_bearer_token()
     bearer = BearerAuth(token)
-    genres = get_genres(bearer)
-    print(genres)
+    # genres = get_genres(bearer)
     data = LokhDataset()
     data.get_genres_from_folders()
