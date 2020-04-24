@@ -5,6 +5,7 @@ import shutil
 import tarfile
 import requests
 import const as C
+import pickle
 from utils import print_progress_bar
 # use spotify api to identify artists
 
@@ -49,10 +50,11 @@ def get_genres(bearer_auth, artist_name='Beethoven'):
 
 
 class LokhDataset():
-    def __init__(self):
+    def __init__(self, bearer):
         self.main_dir = 'data/clean_midi'
         self.get_cleaned_midis()
         self.genre_mappings = {}
+        self.bearer = bearer
 
     def get_cleaned_midis(self):
         """
@@ -83,7 +85,8 @@ class LokhDataset():
                 songs = os.listdir(songs_dir)
                 for i in range(len(songs)):
                     songs[i] = os.path.join(songs_dir, songs[i])
-                genres = get_genres(bearer, artist_name=name)
+
+                genres = get_genres(self.bearer, artist_name=name)
                 if len(genres) > 0:
                     main_genre = None
                     filled = False
@@ -105,6 +108,8 @@ class LokhDataset():
 
                 self.genre_mappings[selected_genre] = self.genre_mappings.setdefault(selected_genre, []) + songs
                 print_progress_bar(idx + 1, num_names, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        with open('genre_mappings.pickle', 'wb') as f:
+            pickle.dump(self.genre_mappings, f)
 
 
 class BearerAuth(requests.auth.AuthBase):
@@ -123,5 +128,5 @@ if __name__ == '__main__':
     token = get_spotify_bearer_token()
     bearer = BearerAuth(token)
     # genres = get_genres(bearer)
-    data = LokhDataset()
+    data = LokhDataset(bearer)
     data.get_genres_from_folders()
