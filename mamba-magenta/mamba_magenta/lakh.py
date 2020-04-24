@@ -48,8 +48,10 @@ def get_genres(bearer_auth, artist_name='Beethoven'):
         return []
 
 
-class LokhDataset():
-    def __init__(self, bearer, already_scraped=False):
+class LakhDataset():
+    def __init__(self, already_scraped=False):
+        token = get_spotify_bearer_token()
+        bearer = BearerAuth(token)
         if already_scraped:
             # check to see if the pickle file exists.
             if os.path.isfile('genre_mappings.pickle'):
@@ -132,7 +134,6 @@ class LokhDataset():
         self.loaded = True
 
 
-
 class BearerAuth(requests.auth.AuthBase):
     def __init__(self, token):
         self.token = token
@@ -143,13 +144,3 @@ class BearerAuth(requests.auth.AuthBase):
         """
         r.headers["authorization"] = "Bearer " + self.token
         return r
-
-
-if __name__ == '__main__':
-    token = get_spotify_bearer_token()
-    bearer = BearerAuth(token)
-    # genres = get_genres(bearer)
-    data = LokhDataset(bearer, already_scraped=True)
-    data.get_genres_from_folders()
-    print(data.genres)
-    print(data[data.genres[0]])

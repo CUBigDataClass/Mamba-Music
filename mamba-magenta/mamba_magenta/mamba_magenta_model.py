@@ -28,6 +28,7 @@ class MambaMagentaModel():
             self.tempo = info['tempo']
             self.temperature = info['temperature']
             # most important part - genre
+            self.sequence = info['sequence']
             self.genre = info['genre']
             self.num_steps = info['num_steps']
             self.velocity_variance = info['velocity_variance']

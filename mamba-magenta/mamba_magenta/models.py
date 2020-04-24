@@ -48,8 +48,8 @@ class MelodyRNN(MambaMagentaModel):
     Generates a one line melody
     with the input sequence as a primer.
     """
-    def __init__(self, args, model_string="basic"):
-        super(MelodyRNN, self).__init__(args)
+    def __init__(self, args, model_string="basic", info=None):
+        super(MelodyRNN, self).__init__(args, info)
         options = ["basic", "mono", "lookback", "attention"]
 
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
