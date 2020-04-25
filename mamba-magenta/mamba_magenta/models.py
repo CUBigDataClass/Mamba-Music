@@ -137,6 +137,13 @@ class ImprovRNN(MambaMagentaModel):
         qpm = input_sequence.tempos[0].qpm
 
         input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
+        primer_sequence_steps = input_sequence.total_quantized_steps
+
+        if primer_sequence_steps > num_steps:
+            # easier to make num_steps bigger to accommodate for sizes
+            # 4 times the size of original sequence..
+            num_steps = primer_sequence_steps * 4
+
         mm.infer_chords_for_sequence(input_sequence)
         raw_chord_string = ""
         for annotation in input_sequence.text_annotations:
@@ -158,6 +165,7 @@ class ImprovRNN(MambaMagentaModel):
                 chord.CopyFrom(text_annotation)
 
         seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+
         total_seconds = len(self.backing_chords) * seconds_per_step
         self.sequence.total_time = total_seconds
 
