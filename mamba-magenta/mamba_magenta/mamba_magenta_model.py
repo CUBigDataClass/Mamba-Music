@@ -115,25 +115,37 @@ class MambaMagentaModel():
             num_steps = self.num_steps
         if hasattr(self, 'temperature'):
             temperature = self.temperature
+
         input_sequence = self.sequence
+
         if empty:
             input_sequence = music_pb2.NoteSequence()
             input_sequence.tempos.add(qpm=80)
 
-        last_end_time = (max(n.end_time for n in input_sequence.notes)
-                         if input_sequence.notes else 0)
-        qpm = input_sequence.tempos[0].qpm if not empty else 80
+        qpm = input_sequence.tempos[0].qpm
         if steps_per_second_avail:
             seconds_per_step = 1 / self.model.steps_per_second
+            steps_per_quarter = (seconds_per_step * qpm) / 60.0
         else:
             seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+            steps_per_quarter = self.model.steps_per_quarter
+
+        quantized_sequence = mm.quantize_note_sequence(input_sequence, steps_per_quarter)
+
+        last_end_time = (max(n.end_time for n in input_sequence.notes)
+                         if input_sequence.notes else 0)
+
+        primer_sequence_steps = quantized_sequence.total_quantized_steps
+        if primer_sequence_steps > num_steps:
+            # easier to make num_steps bigger to accommodate for sizes
+            # 4 times the size of original sequence..
+            num_steps = primer_sequence_steps * 4
 
         total_seconds = num_steps * seconds_per_step
         input_sequence.total_time = min(total_seconds, input_sequence.total_time)
         generator_options = generator_pb2.GeneratorOptions()
 
         generator_options.args['temperature'].float_value = temperature
-
         generate_section = generator_options.generate_sections.add(
             start_time=last_end_time + seconds_per_step,
             end_time=total_seconds)

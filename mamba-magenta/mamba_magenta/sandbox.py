@@ -176,7 +176,7 @@ if __name__ == '__main__':
     # print(genres)
     genre = np.random.choice(genres)
     midi_file = np.random.choice(dataset[genre])
-    model_string = "improv_rnn"
+    model_string = "melody_rnn"
     music_dict = render_sequence_to_music_dict(midi_file, model_string)
     # each model needs to be handled differently.
     create_music(model_string, music_dict)

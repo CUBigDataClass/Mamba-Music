@@ -127,8 +127,9 @@ class ImprovRNN(MambaMagentaModel):
         if backup_seq is not None:
             self.sequence = backup_seq
         input_sequence = copy.deepcopy(self.sequence)
-        num_steps = 25600  # change this for shorter or longer sequences
-        temperature = 1.0
+
+        num_steps = self.num_steps  # change this for shorter/longer sequences
+        temperature = self.temperature
         # Set the start time to begin on the next step after the last note ends.
 
         last_end_time = (max(n.end_time for n in input_sequence.notes)
@@ -159,6 +160,7 @@ class ImprovRNN(MambaMagentaModel):
         seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
         total_seconds = len(self.backing_chords) * seconds_per_step
         self.sequence.total_time = total_seconds
+
         generator_options = generator_pb2.GeneratorOptions()
         generator_options.args['temperature'].float_value = temperature
 
