@@ -13,9 +13,9 @@ import utils
 
 class MambaMagentaModel():
     """
-    Can parse sequence of notes
+    Base class for all Mamba Models.
     """
-    def __init__(self, args, info=None):
+    def __init__(self, args, info=None, is_empty_model=False):
         """
         """
         # loads from argparseconfig
@@ -23,7 +23,9 @@ class MambaMagentaModel():
         if the user wants to load from a yaml file,
         it takes priority over loading via argparse args.
         """
-        if info is not None:
+        if is_empty_model:
+            pass
+        elif info is not None:
             # info will be a dict with the essential information
             self.tempo = info['tempo']
             self.temperature = info['temperature']
@@ -37,7 +39,7 @@ class MambaMagentaModel():
             self.midis = self.parse_notes_string(args.notes)
         # parse midis or notes for a sequence config
         # convert midi data to sequences that magenta can read.
-        if info is None:
+        if info is None and is_empty_model is False:
             self.convert_to_sequence()
         self.counter = 0
 

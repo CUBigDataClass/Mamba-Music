@@ -10,7 +10,7 @@ from models import (
 from lakh import LakhDataset
 import numpy as np
 import magenta.music as mm
-
+import const as C
 from magenta.music.protobuf import music_pb2
 
 
@@ -172,7 +172,7 @@ def create_music(model_string, info):
     else:
         # defaults to music transformer variants
         idx = np.random.randint(0, 2)
-        if idx is None:
+        if idx == 0:
             model = MusicTransformer(None, is_conditioned=False, info=music_dict)
             model.generate()
         else:
@@ -190,22 +190,38 @@ def create_music(model_string, info):
                 model.generate_basic_notes()
 
 
-"""
-magenta.models.shared.events_rnn_model.EventSequenceRnnModelError:
-primer sequence must be shorter than `num_steps`
+def generate_cool_chords(model_string, chord_arr):
+    if model_string == "improv_rnn":
+        chord_string = " ".join(str(chord) for chord in chord_arr)
+        model = ImprovRNN()
+    else:
+        # music vae!
+        pass
 
-"""
+
 if __name__ == '__main__':
     dataset = LakhDataset(already_scraped=True)
-    genres = dataset.genres
+    genres = dataset.genres + ["cool_chords"]
     genre = np.random.choice(genres)
-    midi_file = np.random.choice(dataset[genre])
-    model_string = "music_transformer"
+
+    model_string = "music_vae"
+
+    cool_chords_models = ["improv_rnn", "music_vae"]
     try:
-        music_dict = render_sequence_to_music_dict(midi_file, model_string)
-    # each model needs to be handled differently.
-        create_music(model_string, music_dict)
+        if genre == "cool_chords" and model_string in cool_chords_models:
+            # we can generate cool chords only on these conditions.
+            random_chord = np.random.choice(C.COOL_CHORDS)
+            generate_cool_chords(model_string, random_chord)
+            
+        else:
+            midi_file = np.random.choice(dataset[genre])
+            music_dict = render_sequence_to_music_dict(midi_file, model_string)
+
+            create_music(model_string, music_dict)
+
     except Exception as e:
         # if for some reason something fails, give the people what they want.
-        # give them music vae.
-        pass
+        # give them the Music Transformer
+
+        model = MusicTransformer(None, is_conditioned=False, is_empty_model=True)
+        model.generate()

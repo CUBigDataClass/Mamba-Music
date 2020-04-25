@@ -8,3 +8,5 @@ SPOTIFY_SEARCH_ENDPOINT = 'https://api.spotify.com/v1/search'
 SPOTIFY_TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token'
 CLIENT_ID = os.environ['SPOTIFY_CLIENT_ID']
 CLIENT_SECRET = os.environ['SPOTIFY_CLIENT_SECRET']
+COOL_CHORDS = [['C', 'G', 'Am', 'Em', 'F', 'C', 'F', 'G'],
+               ['C', 'C']]
