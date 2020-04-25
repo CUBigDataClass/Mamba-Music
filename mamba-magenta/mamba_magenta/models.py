@@ -314,7 +314,7 @@ class MusicTransformer(MambaMagentaModel):
     helps provide accompaniment.
     """
     def __init__(self, args, is_conditioned=False, info=None):
-        super(MusicTransformer, self).__init__(args)
+        super(MusicTransformer, self).__init__(args, info)
         self.get_model()
 
         self.initialize(is_conditioned)
@@ -409,7 +409,7 @@ class MusicTransformer(MambaMagentaModel):
             }
 
     def generate(self):
-        # generates an unconditioned piece
+        # based on i
         self.targets = []
         self.decode_length = 1024
 
@@ -422,21 +422,15 @@ class MusicTransformer(MambaMagentaModel):
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
         generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
 
-    def generate_primer(self, filename='C major scale'):
+    def generate_primer(self):
         """
         Put something important here.
 
         """
-        filenames = {
-            'C major arpeggio': 'models/primers/c_major_arpeggio.mid',
-            'C major scale': 'models/primers/c_major_scale.mid',
-            'Clair de Lune': 'models/primers/clair_de_lune.mid',
-        }
-        if filename not in filenames.keys():
-            keys2list = list(filenames.keys())
-            raise ValueError(f"Choose from {keys2list}")
+        if self.conditioned:
+            raise ValueError("Should be using an unconditioned model!")
 
-        primer_ns = mm.midi_file_to_note_sequence(filenames[filename])
+        primer_ns = self.sequence
         primer_ns = mm.apply_sustain_control_changes(primer_ns)
         max_primer_seconds = 20
 
@@ -476,66 +470,76 @@ class MusicTransformer(MambaMagentaModel):
 
         generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}")
 
-
-    def generate_basic_notes(self, melody='Twinkle Twinkle Little Star', qpm=160):
+    def generate_basic_notes(self, qpm=160, failsafe=False):
         """
         Requires melody conditioned model.
         """
         if not self.conditioned:
             raise ValueError("Model should be conditioned!")
 
-        event_padding = 2 * [mm.MELODY_NO_EVENT]
-        melodies = {
-            'Mary Had a Little Lamb': [
-                64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
-                62, 62, 62, mm.MELODY_NO_EVENT,
-                64, 67, 67, mm.MELODY_NO_EVENT,
-                64, 62, 60, 62, 64, 64, 64, 64,
-                62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-            ],
-            'Row Row Row Your Boat': [
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                60, mm.MELODY_NO_EVENT, 62,
-                64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                64, mm.MELODY_NO_EVENT, 62,
-                64, mm.MELODY_NO_EVENT, 65,
-                67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
-                67, mm.MELODY_NO_EVENT, 65,
-                64, mm.MELODY_NO_EVENT, 62,
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-            ],
-            'Twinkle Twinkle Little Star': [
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT       
-            ]
-        }
-        if melody not in melodies.keys():
-            keys2list = list(melodies.keys())
-            raise ValueError(f"Choose from {keys2list}")
+        if failsafe:
+            event_padding = 2 * [mm.MELODY_NO_EVENT]
+            melodies = {
+                'Mary Had a Little Lamb': [
+                    64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
+                    62, 62, 62, mm.MELODY_NO_EVENT,
+                    64, 67, 67, mm.MELODY_NO_EVENT,
+                    64, 62, 60, 62, 64, 64, 64, 64,
+                    62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Row Row Row Your Boat': [
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, 65,
+                    67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
+                    67, mm.MELODY_NO_EVENT, 65,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Twinkle Twinkle Little Star': [
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT
+                ]
+            }
+            rand_key = np.random.choice(list(melodies.keys()))
 
-        # Use one of the provided melodies.
-        events = [event + 12 if event != mm.MELODY_NO_EVENT else event
-                  for e in melodies[melody]
-                  for event in [e] + event_padding]
+            # Use one of the provided melodies.
+            events = [event + 12 if event != mm.MELODY_NO_EVENT else event
+                      for e in melodies[rand_key]
+                      for event in [e] + event_padding]
+            self.inputs = self.encoders['inputs'].encode(
+                ' '.join(str(e) for e in events))
+            melody_ns = mm.Melody(events).to_sequence(qpm=160)
 
-        self.inputs = self.encoders['inputs'].encode(
-            ' '.join(str(e) for e in events))
-        melody_ns = mm.Melody(events).to_sequence(qpm=160)
+        else:
+            melody_ns = copy.deepcopy(self.sequence)
+            melody_instrument = mm.infer_melody_for_sequence(melody_ns)
+            notes = [note for note in melody_ns.notes
+                     if note.instrument == melody_instrument]
+
+            melody_ns.notes.extend(
+                sorted(notes, key=lambda note: note.start_time))
+            for i in range(len(melody_ns.notes) - 1):
+                melody_ns.notes[i].end_time = melody_ns.notes[i + 1].start_time
+            self.inputs = self.encoders['inputs'].encode_note_sequence(
+                        melody_ns)
 
         self.decode_length = 4096
         sample_ids = next(self.samples)['outputs']

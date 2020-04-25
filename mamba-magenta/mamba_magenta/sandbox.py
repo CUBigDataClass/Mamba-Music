@@ -124,7 +124,8 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         music_dict['backup_sequence'] = backup_sequence
 
     elif model_string == "music_transformer":
-        subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
+        # model generate will take care of things
+        music_dict['sequence'] = sequence
 
     return music_dict
 
@@ -170,15 +171,20 @@ def create_music(model_string, info):
 
     else:
         # defaults to music transformer variants
-        idx = np.random.randint(0, 3)
-        if idx == 0:
-            model = MusicTransformer(None, is_conditioned=False)
+        idx = np.random.randint(0, 2)
+        if idx is None:
+            model = MusicTransformer(None, is_conditioned=False, info=music_dict)
             model.generate()
-        elif idx == 1:
-            model = MusicTransformer(None, is_conditioned=True)
-            model.generate_primer()
         else:
-            model = MusicTransformer(None, is_conditioned=True)
+            try:
+                model = MusicTransformer(None, is_conditioned=False, info=music_dict)
+                model.generate_primer()
+            except Exception as e:
+                model = MusicTransformer(None, is_conditioned=True, info=music_dict)
+
+                # resort to rudimentary 1 of 3 melodies
+                model.generate_basic_notes()
+
 
 """
 magenta.models.shared.events_rnn_model.EventSequenceRnnModelError:
@@ -190,7 +196,7 @@ if __name__ == '__main__':
     genres = dataset.genres
     genre = np.random.choice(genres)
     midi_file = np.random.choice(dataset[genre])
-    model_string = "music_vae"
+    model_string = "music_transformer"
     music_dict = render_sequence_to_music_dict(midi_file, model_string)
     # each model needs to be handled differently.
     create_music(model_string, music_dict)
