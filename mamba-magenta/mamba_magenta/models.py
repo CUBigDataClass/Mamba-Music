@@ -191,8 +191,8 @@ class MusicVAE(MambaMagentaModel):
 
     Takes in chords, temperature, bars
     """
-    def __init__(self, args):
-        super(MusicVAE, self).__init__(args)
+    def __init__(self, args, info=None):
+        super(MusicVAE, self).__init__(args, info=info)
         self.get_model()
 
         self.initialize()
@@ -259,13 +259,25 @@ class MusicVAE(MambaMagentaModel):
                         config, batch_size=BATCH_SIZE,
                         checkpoint_dir_or_path='models/model_chords_fb64.ckpt')
 
-    def x(self):
-        pass
-
-    def generate(self, empty=False, chords=['C', 'G', 'A', 'E', 'C' 'G'],
-                 num_bars=64, temperature=0.2):
+    def generate(self, empty=False,
+                 num_bars=64, temperature=0.2, backup_seq=None):
         # Interpolation, Repeating Chord Progression
+        if backup_seq is not None:
+            self.sequence = backup_seq
 
+        if hasattr(self, 'temperature'):
+            temperature = self.temperature
+        copy_sequence = copy.deepcopy(self.sequence)
+
+        quantized_sequence = mm.quantize_note_sequence(copy_sequence, 8)
+        # mm.infer_dense_chords_for_sequence()
+        mm.infer_chords_for_sequence(quantized_sequence)
+
+        chords = []
+        for annotation in quantized_sequence.text_annotations:
+            if annotation.annotation_type == CHORD_SYMBOL:
+                chord_name = annotation.text
+                chords.append(chord_name)
         z1 = np.random.normal(size=[Z_SIZE])
         z2 = np.random.normal(size=[Z_SIZE])
         z = np.array([self.slerp(z1, z2, t)
@@ -402,7 +414,6 @@ class MusicTransformer(MambaMagentaModel):
 
         # Generate sample events.
         sample_ids = next(self.samples)['outputs']
-        print(sample_ids)
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,

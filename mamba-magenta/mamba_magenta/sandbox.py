@@ -93,7 +93,7 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         if model_string == "performance_rnn":
             music_dict['num_steps'] = 2560
 
-    elif model_string == "improv_rnn":
+    elif model_string == "improv_rnn" or model_string == "music_vae":
         subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
         melody = mm.infer_melody_for_sequence(subsequence)
 
@@ -113,8 +113,9 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
 
                 new_val += diff
                 backup_val += 0.5
-            note.program = 0
-            note.instrument = 1
+            if model_string == "improv_rnn":
+                note.program = 0
+                note.instrument = 1
         new_sequence.total_time = new_val
         new_sequence.tempos.add(qpm=subsequence.tempos[0].qpm)
         backup_sequence.total_time = backup_val
@@ -122,10 +123,9 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         music_dict['sequence'] = subsequence
         music_dict['backup_sequence'] = backup_sequence
 
-    elif model_string == "music_vae":
-        pass
     elif model_string == "music_transformer":
-        pass
+        subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
+
     return music_dict
 
 
@@ -165,6 +165,12 @@ def create_music(model_string, info):
             print(e)
             model.generate(backup_seq=music_dict["backup_sequence"])
 
+    elif model_string == "music_vae":
+        model = MusicVAE(None, info=music_dict)
+        try:
+            model.generate()
+        except Exception as e:
+            model.generate(backup_seq=music_dict["backup_sequence"])
 """
 magenta.models.shared.events_rnn_model.EventSequenceRnnModelError:
 primer sequence must be shorter than `num_steps`
@@ -173,11 +179,9 @@ primer sequence must be shorter than `num_steps`
 if __name__ == '__main__':
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres
-    # print(genres)
     genre = np.random.choice(genres)
     midi_file = np.random.choice(dataset[genre])
-    model_string = "improv_rnn"
+    model_string = "music_vae"
     music_dict = render_sequence_to_music_dict(midi_file, model_string)
     # each model needs to be handled differently.
     create_music(model_string, music_dict)
-    # model = ImprovRNN(None, info=music_dict, chords="A C E F Gm")
