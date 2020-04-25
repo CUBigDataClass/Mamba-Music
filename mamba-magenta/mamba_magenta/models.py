@@ -313,7 +313,7 @@ class MusicTransformer(MambaMagentaModel):
     Can be "primed" with a melody, and
     helps provide accompaniment.
     """
-    def __init__(self, args, is_conditioned=False):
+    def __init__(self, args, is_conditioned=False, info=None):
         super(MusicTransformer, self).__init__(args)
         self.get_model()
 
@@ -408,7 +408,8 @@ class MusicTransformer(MambaMagentaModel):
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
 
-    def generate(self, empty=False):
+    def generate(self):
+        # generates an unconditioned piece
         self.targets = []
         self.decode_length = 1024
 
@@ -475,6 +476,7 @@ class MusicTransformer(MambaMagentaModel):
 
         generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}")
 
+
     def generate_basic_notes(self, melody='Twinkle Twinkle Little Star', qpm=160):
         """
         Requires melody conditioned model.
@@ -483,7 +485,6 @@ class MusicTransformer(MambaMagentaModel):
             raise ValueError("Model should be conditioned!")
 
         event_padding = 2 * [mm.MELODY_NO_EVENT]
-
         melodies = {
             'Mary Had a Little Lamb': [
                 64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,

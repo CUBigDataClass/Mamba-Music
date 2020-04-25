@@ -157,20 +157,29 @@ def create_music(model_string, info):
             print(e)
             model.generate(empty=True)
 
-    elif model_string == "improv_rnn":
-        model = ImprovRNN(None, info=music_dict)
+    elif model_string == "improv_rnn" or model_string == "music_vae":
+        if model_string == "improv_rnn":
+            model = ImprovRNN(None, info=music_dict)
+        else:
+            model = MusicVAE(None, info=music_dict)
         try:
             model.generate()
         except Exception as e:
             print(e)
             model.generate(backup_seq=music_dict["backup_sequence"])
 
-    elif model_string == "music_vae":
-        model = MusicVAE(None, info=music_dict)
-        try:
+    else:
+        # defaults to music transformer variants
+        idx = np.random.randint(0, 3)
+        if idx == 0:
+            model = MusicTransformer(None, is_conditioned=False)
             model.generate()
-        except Exception as e:
-            model.generate(backup_seq=music_dict["backup_sequence"])
+        elif idx == 1:
+            model = MusicTransformer(None, is_conditioned=True)
+            model.generate_primer()
+        else:
+            model = MusicTransformer(None, is_conditioned=True)
+
 """
 magenta.models.shared.events_rnn_model.EventSequenceRnnModelError:
 primer sequence must be shorter than `num_steps`
