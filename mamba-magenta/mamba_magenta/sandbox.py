@@ -80,8 +80,10 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         'num_steps': 2560,
         'velocity_variance': 0.5
     }
-    print(model_string)
-    if model_string == "melody_rnn" or model_string == "performance_rnn":
+    backup_sequence = None
+    basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
+                    "pianoroll_rnn_nade"]
+    if model_string in basic_models:
         subsequence = mm.extract_subsequence(sequence, 0.0, 14.0)
         for note in subsequence.notes:
             # rnns can work with piano data.
@@ -91,59 +93,35 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         if model_string == "performance_rnn":
             music_dict['num_steps'] = 2560
 
-    elif model_string == "polyphony_rnn":
-        subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
-        for note in subsequence.notes:
-            # rnns can work with piano data.
-            note.program = 0
-            note.instrument = 1
-        music_dict['sequence'] = subsequence
-    elif model_string == "pianoroll_rnn_nade":
-        subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
-        for note in subsequence.notes:
-            # rnns can work with piano data.
-            note.program = 0
-            note.instrument = 1
-        music_dict['sequence'] = subsequence
     elif model_string == "improv_rnn":
         subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
         melody = mm.infer_melody_for_sequence(subsequence)
-        twinkle_twinkle = music_pb2.NoteSequence()
+
         new_sequence = music_pb2.NoteSequence()
-        val = 0.
+        backup_sequence = music_pb2.NoteSequence()
+        new_val = 0.
+        backup_val = 0.
         for note in subsequence.notes:
             # rnns can work with piano data.
             if note.instrument == melody:
                 start = note.start_time
                 end = note.end_time
                 diff = end - start
-                new_sequence.notes.add(pitch=note.pitch, start_time=val, end_time=val+diff, velocity=80)
-                val+=diff
+
+                new_sequence.notes.add(pitch=note.pitch, start_time=new_val, end_time=new_val+diff, velocity=160)
+                backup_sequence.notes.add(pitch=note.pitch, start_time=backup_val, end_time=backup_val+0.5, velocity=160)
+
+                new_val += diff
+                backup_val += 0.5
             note.program = 0
             note.instrument = 1
-        new_sequence.total_time = val
+        new_sequence.total_time = new_val
         new_sequence.tempos.add(qpm=subsequence.tempos[0].qpm)
-        print(new_sequence.notes)
-        # twinkle_twinkle.notes.add(pitch=60, start_time=0.0, end_time=0.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=60, start_time=0.5, end_time=1.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=67, start_time=1.0, end_time=1.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=67, start_time=1.5, end_time=2.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=69, start_time=2.0, end_time=2.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=69, start_time=2.5, end_time=3.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=67, start_time=3.0, end_time=4.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=65, start_time=4.0, end_time=4.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=65, start_time=4.5, end_time=5.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=64, start_time=5.0, end_time=5.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=64, start_time=5.5, end_time=6.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=62, start_time=6.0, end_time=6.5, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=62, start_time=6.5, end_time=7.0, velocity=80)
-        # twinkle_twinkle.notes.add(pitch=60, start_time=7.0, end_time=8.0, velocity=80) 
-        # twinkle_twinkle.total_time = 8
+        backup_sequence.total_time = backup_val
+        backup_sequence.tempos.add(qpm=60)
+        music_dict['sequence'] = subsequence
+        music_dict['backup_sequence'] = backup_sequence
 
-        # # 60 bpm!
-        # twinkle_twinkle.tempos.add(qpm=60)
-
-        music_dict['sequence'] = new_sequence
     elif model_string == "music_vae":
         pass
     elif model_string == "music_transformer":
@@ -157,21 +135,49 @@ def validate_info(info_dict, keys, types_list):
             raise TypeError(f'Incorrect type provided for key {key}.')
 
 
+def create_music(model_string, info):
+    """
+    creates the music. The real deal.
+    """
+    basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
+                    "pianoroll_rnn_nade"]
+    if model_string in basic_models:
+        if model_string == "melody_rnn":
+            model = MelodyRNN(args=None, info=info)
+        elif model_string == "performance_rnn":
+            model = PerformanceRNN(args=None, info=info)
+        elif model_string == "polyphony_rnn":
+            model = PolyphonyRNN(args=None, info=info)
+        else:
+            # rnn nade model
+            model = PianoRollRNNNade(args=None, info=info)
+        try:
+            model.generate()
+        except Exception as e:
+            print(e)
+            model.generate(empty=True)
+
+    elif model_string == "improv_rnn":
+        model = ImprovRNN(None, info=music_dict)
+        try:
+            model.generate()
+        except Exception as e:
+            print(e)
+            model.generate(backup_seq=music_dict["backup_sequence"])
+
+"""
+magenta.models.shared.events_rnn_model.EventSequenceRnnModelError:
+primer sequence must be shorter than `num_steps`
+
+"""
 if __name__ == '__main__':
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres
-    music_dict = {
-        'tempo': 80.0,
-        'temperature': 1.0,
-        'num_steps': 2560,
-        'velocity_variance': 0.5
-    }
-    midi_file = np.random.choice(dataset[genres[10]])
-    music_dict = render_sequence_to_music_dict(midi_file, "improv_rnn")
-
-    model = ImprovRNN(None, info=music_dict, chords="A C E F Gm")
-    try:
-        model.generate()
-    except Exception as e:
-        print(e)
-        model.generate()
+    # print(genres)
+    genre = np.random.choice(genres)
+    midi_file = np.random.choice(dataset[genre])
+    model_string = "improv_rnn"
+    music_dict = render_sequence_to_music_dict(midi_file, model_string)
+    # each model needs to be handled differently.
+    create_music(model_string, music_dict)
+    # model = ImprovRNN(None, info=music_dict, chords="A C E F Gm")

@@ -32,7 +32,7 @@ from magenta.models.score2perf import score2perf
 CHORD_SYMBOL = music_pb2.NoteSequence.TextAnnotation.CHORD_SYMBOL
 
 # Velocity at which to play chord notes when rendering chords.
-CHORD_VELOCITY = 50
+CHORD_VELOCITY = 80
 
 BATCH_SIZE = 4
 Z_SIZE = 512
@@ -56,20 +56,6 @@ class MelodyRNN(MambaMagentaModel):
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
         self.initialize("Melody RNN", melody_rnn_sequence_generator)
 
-    def construct_from_info_dict(self):
-        """
-        constructs note sequence from provided info dictionary.
-        """
-        pass
-    #     {
-    #     'tempo': int
-    #     'temperature': int
-    #     'genre': str
-    #     'tempo': int
-    #     'velocity_variance': int
-    #     'num_steps': int
-    # }
-
 
 class PerformanceRNN(MambaMagentaModel):
     """
@@ -88,6 +74,9 @@ class PerformanceRNN(MambaMagentaModel):
         self.get_standard_model(model_string, model_string, options)
 
         self.initialize("Performance RNN", performance_sequence_generator)
+
+    def generate(self):
+        super(PerformanceRNN, self).generate(steps_per_second_avail=True)
 
 
 class PolyphonyRNN(MambaMagentaModel):
@@ -121,33 +110,31 @@ class ImprovRNN(MambaMagentaModel):
     Requires both the chords and number of times to repeat those chords
     (can be 1 though).
     """
-    def __init__(self, args, chords, model_string="chord_pitches_improv",
+    def __init__(self, args, model_string="chord_pitches_improv",
                  phrase_num=4, info=None):
         super(ImprovRNN, self).__init__(args, info=info)
         options = ["chord_pitches_improv"]
-        # mm.infer_chords_for_sequence()
         self.phrase_num = 4
         self.get_standard_model(model_string, model_string, options)
-        # chords must be a string; e.g., "A C E F Gm"
-        # raw_chords = chords.split()
-        # repeated_chords = [chord for chord in raw_chords
-        #                    for _ in range(16)] * phrases
-        # self.backing_chords = mm.ChordProgression(repeated_chords)
 
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
 
-    def generate(self, empty=False):
+    def generate(self, empty=False, backup_seq=None):
         """
         different implementation is needed for improv rnn's
         generation function.
         """
+        if backup_seq is not None:
+            self.sequence = backup_seq
         input_sequence = copy.deepcopy(self.sequence)
         num_steps = 25600  # change this for shorter or longer sequences
         temperature = 1.0
         # Set the start time to begin on the next step after the last note ends.
+
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                   if input_sequence.notes else 0)
         qpm = input_sequence.tempos[0].qpm
+
         input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
         mm.infer_chords_for_sequence(input_sequence)
         raw_chord_string = ""
@@ -161,12 +148,13 @@ class ImprovRNN(MambaMagentaModel):
         repeated_chords = [chord for chord in raw_chords
                            for _ in range(16)] * self.phrase_num
         self.backing_chords = mm.ChordProgression(repeated_chords)
+
         chord_sequence = self.backing_chords.to_sequence(sequence_start_time=0.0, qpm=qpm)
+
         for text_annotation in chord_sequence.text_annotations:
             if text_annotation.annotation_type == CHORD_SYMBOL:
                 chord = self.sequence.text_annotations.add()
                 chord.CopyFrom(text_annotation)
-                print(text_annotation)
 
         seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
         total_seconds = len(self.backing_chords) * seconds_per_step

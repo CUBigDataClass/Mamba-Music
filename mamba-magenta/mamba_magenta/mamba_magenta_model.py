@@ -118,6 +118,8 @@ class MambaMagentaModel():
         input_sequence = self.sequence
         if empty:
             input_sequence = music_pb2.NoteSequence()
+            input_sequence.tempos.add(qpm=80)
+
         last_end_time = (max(n.end_time for n in input_sequence.notes)
                          if input_sequence.notes else 0)
         qpm = input_sequence.tempos[0].qpm if not empty else 80
