@@ -177,8 +177,12 @@ def create_music(model_string, info):
             model.generate()
         else:
             try:
-                model = MusicTransformer(None, is_conditioned=False, info=music_dict)
-                model.generate_primer()
+                model = MusicTransformer(None, is_conditioned=True, info=music_dict)
+
+                # resort to rudimentary 1 of 3 melodies
+                model.generate_basic_notes()
+                # model = MusicTransformer(None, is_conditioned=False, info=music_dict)
+                # model.generate_primer()
             except Exception as e:
                 model = MusicTransformer(None, is_conditioned=True, info=music_dict)
 
@@ -197,6 +201,11 @@ if __name__ == '__main__':
     genre = np.random.choice(genres)
     midi_file = np.random.choice(dataset[genre])
     model_string = "music_transformer"
-    music_dict = render_sequence_to_music_dict(midi_file, model_string)
+    try:
+        music_dict = render_sequence_to_music_dict(midi_file, model_string)
     # each model needs to be handled differently.
-    create_music(model_string, music_dict)
+        create_music(model_string, music_dict)
+    except Exception as e:
+        # if for some reason something fails, give the people what they want.
+        # give them music vae.
+        pass

@@ -408,6 +408,57 @@ class MusicTransformer(MambaMagentaModel):
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
 
+    def failsafe(self):
+        melodies = {
+                'Mary Had a Little Lamb': [
+                    64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
+                    62, 62, 62, mm.MELODY_NO_EVENT,
+                    64, 67, 67, mm.MELODY_NO_EVENT,
+                    64, 62, 60, 62, 64, 64, 64, 64,
+                    62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Row Row Row Your Boat': [
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, 65,
+                    67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
+                    67, mm.MELODY_NO_EVENT, 65,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Twinkle Twinkle Little Star': [
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT
+                ]
+            }
+        event_padding = 2 * [mm.MELODY_NO_EVENT]
+
+        rand_key = np.random.choice(list(melodies.keys()))
+
+        # Use one of the provided melodies.
+        events = [event + 12 if event != mm.MELODY_NO_EVENT else event
+                  for e in melodies[rand_key]
+                  for event in [e] + event_padding]
+        self.inputs = self.encoders['inputs'].encode(
+            ' '.join(str(e) for e in events))
+
     def generate(self):
         # based on i
         self.targets = []
@@ -478,68 +529,25 @@ class MusicTransformer(MambaMagentaModel):
             raise ValueError("Model should be conditioned!")
 
         if failsafe:
-            event_padding = 2 * [mm.MELODY_NO_EVENT]
-            melodies = {
-                'Mary Had a Little Lamb': [
-                    64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
-                    62, 62, 62, mm.MELODY_NO_EVENT,
-                    64, 67, 67, mm.MELODY_NO_EVENT,
-                    64, 62, 60, 62, 64, 64, 64, 64,
-                    62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
-                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-                ],
-                'Row Row Row Your Boat': [
-                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    60, mm.MELODY_NO_EVENT, 62,
-                    64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    64, mm.MELODY_NO_EVENT, 62,
-                    64, mm.MELODY_NO_EVENT, 65,
-                    67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
-                    67, mm.MELODY_NO_EVENT, 65,
-                    64, mm.MELODY_NO_EVENT, 62,
-                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-                ],
-                'Twinkle Twinkle Little Star': [
-                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT
-                ]
-            }
-            rand_key = np.random.choice(list(melodies.keys()))
-
-            # Use one of the provided melodies.
-            events = [event + 12 if event != mm.MELODY_NO_EVENT else event
-                      for e in melodies[rand_key]
-                      for event in [e] + event_padding]
-            self.inputs = self.encoders['inputs'].encode(
-                ' '.join(str(e) for e in events))
-            melody_ns = mm.Melody(events).to_sequence(qpm=160)
-
+            self.failsafe()
         else:
             melody_ns = copy.deepcopy(self.sequence)
-            melody_instrument = mm.infer_melody_for_sequence(melody_ns)
-            notes = [note for note in melody_ns.notes
-                     if note.instrument == melody_instrument]
+            try:
+                melody_instrument = mm.infer_melody_for_sequence(melody_ns)
+                notes = [note for note in melody_ns.notes
+                        if note.instrument == melody_instrument]
 
-            melody_ns.notes.extend(
-                sorted(notes, key=lambda note: note.start_time))
-            for i in range(len(melody_ns.notes) - 1):
-                melody_ns.notes[i].end_time = melody_ns.notes[i + 1].start_time
-            self.inputs = self.encoders['inputs'].encode_note_sequence(
-                        melody_ns)
+                melody_ns.notes.extend(
+                    sorted(notes, key=lambda note: note.start_time))
+                for i in range(len(melody_ns.notes) - 1):
+                    melody_ns.notes[i].end_time = melody_ns.notes[i + 1].start_time
+                self.inputs = self.encoders['inputs'].encode_note_sequence(
+                            melody_ns)
+                print("Melody successfully parsed and encoded!")
+            except Exception as e:
+                print(f"Error in encoding stage {e}")
+                print("Resorting to a basic melody")
+                self.failsafe()
 
         self.decode_length = 4096
         sample_ids = next(self.samples)['outputs']
