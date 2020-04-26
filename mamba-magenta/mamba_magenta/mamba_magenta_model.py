@@ -13,9 +13,9 @@ import utils
 
 class MambaMagentaModel():
     """
-    Can parse sequence of notes
+    Base class for all Mamba Models.
     """
-    def __init__(self, args):
+    def __init__(self, args, info=None, is_empty_model=False):
         """
         """
         # loads from argparseconfig
@@ -23,14 +23,24 @@ class MambaMagentaModel():
         if the user wants to load from a yaml file,
         it takes priority over loading via argparse args.
         """
-        if args.load_config:
+        if is_empty_model:
+            pass
+        elif info is not None:
+            # info will be a dict with the essential information
+            self.tempo = info['tempo']
+            self.temperature = info['temperature']
+            self.sequence = info['sequence']
+            self.num_steps = info['num_steps']
+
+        elif args.load_config:
             self.midis = self.parse_yaml(args.config_dir, args.config_file)
         else:
             # load from argparse
             self.midis = self.parse_notes_string(args.notes)
         # parse midis or notes for a sequence config
         # convert midi data to sequences that magenta can read.
-        self.convert_to_sequence()
+        if info is None and is_empty_model is False:
+            self.convert_to_sequence()
         self.counter = 0
 
     def convert_mp3(self, filename, to_mp3=True):
@@ -59,6 +69,7 @@ class MambaMagentaModel():
             velocity = int(row[3])
             self.sequence.notes.add(pitch=midi_num, start_time=row[1], end_time=row[2], velocity=velocity)
         self.sequence.total_time = self.time
+
         self.sequence.tempos.add(qpm=self.tempo)
 
     def sequence2mid(self):
@@ -88,6 +99,7 @@ class MambaMagentaModel():
         """
         print("Initializing {name}...")
         bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
+
         generator_map = sequence_generator.get_generator_map()
         if extra_name is not None:
             self.model_name = extra_name
@@ -100,20 +112,41 @@ class MambaMagentaModel():
         """
         generates a song.
         """
+        if hasattr(self, 'num_steps'):
+            num_steps = self.num_steps
+        if hasattr(self, 'temperature'):
+            temperature = self.temperature
+
         input_sequence = self.sequence
-        last_end_time = (max(n.end_time for n in input_sequence.notes)
-                         if input_sequence.notes else 0)
+
+        if empty:
+            input_sequence = music_pb2.NoteSequence()
+            input_sequence.tempos.add(qpm=80)
+
         qpm = input_sequence.tempos[0].qpm
         if steps_per_second_avail:
             seconds_per_step = 1 / self.model.steps_per_second
+            steps_per_quarter = (seconds_per_step * qpm) / 60.0
         else:
             seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+            steps_per_quarter = self.model.steps_per_quarter
+
+        quantized_sequence = mm.quantize_note_sequence(input_sequence, steps_per_quarter)
+
+        last_end_time = (max(n.end_time for n in input_sequence.notes)
+                         if input_sequence.notes else 0)
+
+        primer_sequence_steps = quantized_sequence.total_quantized_steps
+        if primer_sequence_steps > num_steps:
+            # easier to make num_steps bigger to accommodate for sizes
+            # 4 times the size of original sequence..
+            num_steps = primer_sequence_steps * 4
 
         total_seconds = num_steps * seconds_per_step
-
+        input_sequence.total_time = min(total_seconds, input_sequence.total_time)
         generator_options = generator_pb2.GeneratorOptions()
-        generator_options.args['temperature'].float_value = temperature
 
+        generator_options.args['temperature'].float_value = temperature
         generate_section = generator_options.generate_sections.add(
             start_time=last_end_time + seconds_per_step,
             end_time=total_seconds)
@@ -162,7 +195,7 @@ class MambaMagentaModel():
             try:
                 midi_val = int(note)
                 # fill in start time, end time, and velocity as well
-                midis.append((midi_val, running_time, running_time+0.5, 80))
+                midis.append((midi_val, running_time, running_time + 0.5, 80))
                 running_time += 0.5
 
             except Exception as e:

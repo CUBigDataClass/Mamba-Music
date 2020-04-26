@@ -11,6 +11,7 @@ from magenta.models.polyphony_rnn import polyphony_sequence_generator
 from magenta.models.pianoroll_rnn_nade import pianoroll_rnn_nade_sequence_generator
 from magenta.models.improv_rnn import improv_rnn_sequence_generator
 
+import copy
 
 import magenta.music as mm
 from midi2audio import FluidSynth
@@ -31,7 +32,7 @@ from magenta.models.score2perf import score2perf
 CHORD_SYMBOL = music_pb2.NoteSequence.TextAnnotation.CHORD_SYMBOL
 
 # Velocity at which to play chord notes when rendering chords.
-CHORD_VELOCITY = 50
+CHORD_VELOCITY = 80
 
 BATCH_SIZE = 4
 Z_SIZE = 512
@@ -43,8 +44,13 @@ SAMPLE_RATE = 44100
 
 
 class MelodyRNN(MambaMagentaModel):
-    def __init__(self, args, model_string="basic"):
-        super(MelodyRNN, self).__init__(args)
+    """
+    MelodyRNN model
+    Generates a one line melody
+    with the input sequence as a primer.
+    """
+    def __init__(self, args=None, model_string="basic", info=None):
+        super(MelodyRNN, self).__init__(args, info)
         options = ["basic", "mono", "lookback", "attention"]
 
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
@@ -52,8 +58,14 @@ class MelodyRNN(MambaMagentaModel):
 
 
 class PerformanceRNN(MambaMagentaModel):
-    def __init__(self, args, model_string="performance_with_dynamics"):
-        super(PerformanceRNN, self).__init__(args)
+    """
+    PerformanceRNN model.
+    Somewhat akin to a non-noob fiddling on a piano.
+    Not super music, just playing around.
+
+    """
+    def __init__(self, args=None, model_string="performance_with_dynamics", info=None):
+        super(PerformanceRNN, self).__init__(args, info=info)
         options = ["performance", "performance_with_dynamics",
                    "performance_with_dynamics_and_modulo_encoding",
                    "density_conditioned_performance_with_dynamics",
@@ -63,10 +75,17 @@ class PerformanceRNN(MambaMagentaModel):
 
         self.initialize("Performance RNN", performance_sequence_generator)
 
+    def generate(self):
+        super(PerformanceRNN, self).generate(steps_per_second_avail=True)
+
 
 class PolyphonyRNN(MambaMagentaModel):
-    def __init__(self, args, model_string="polyphony"):
-        super(PolyphonyRNN, self).__init__(args)
+    """
+    Music slightly akin to Bach
+
+    """
+    def __init__(self, args=None, model_string="polyphony", info=None):
+        super(PolyphonyRNN, self).__init__(args, info=info)
         options = ["polyphony"]
         self.get_standard_model(model_string, "polyphony_rnn", options)
         self.model_name = "polyphony_rnn"
@@ -74,50 +93,83 @@ class PolyphonyRNN(MambaMagentaModel):
 
 
 class PianoRollRNNNade(MambaMagentaModel):
-    def __init__(self, args, model_string="pianoroll_rnn_nade"):
-        super(PianoRollRNNNade, self).__init__(args)
+    """
+    A bit of a more intriguing model.
+    """
+    def __init__(self, args=None, model_string="pianoroll_rnn_nade", info=None):
+        super(PianoRollRNNNade, self).__init__(args, info=info)
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
         self.get_standard_model(model_string, model_string, options)
         self.initialize("Pianroll RNN Nade", pianoroll_rnn_nade_sequence_generator, "rnn-nade_attn")
 
 
 class ImprovRNN(MambaMagentaModel):
-    def __init__(self, args, chords, model_string="chord_pitches_improv", phrases=4):
-        super(ImprovRNN, self).__init__(args)
-        options = ["chord_pitches_improv"]
-        self.get_standard_model(model_string, model_string, options)
-        raw_chords = chords.split()
-        repeated_chords = [chord for chord in raw_chords
-                           for _ in range(16)] * phrases
-        print(repeated_chords)
-        self.backing_chords = mm.ChordProgression(repeated_chords)
+    """
+    improv rnn, which generates melodies underlying a
+    specific set of chords.
+    Requires both the chords and number of times to repeat those chords
+    (can be 1 though).
+    """
+    def __init__(self, args=None, model_string="chord_pitches_improv",
+                 phrase_num=4, info=None, is_empty_model=False):
 
-        # self.initialize()
+        super(ImprovRNN, self).__init__(args, info=info,
+                                        is_empty_model=is_empty_model)
+        options = ["chord_pitches_improv"]
+        self.phrase_num = 4
+        self.get_standard_model(model_string, model_string, options)
+
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
 
-    def generate(self, empty=False):
+    def generate(self, empty=False, backup_seq=None):
         """
         different implementation is needed for improv rnn's
         generation function.
         """
-        input_sequence = self.sequence
-        num_steps = 2560  # change this for shorter or longer sequences
-        temperature = 1.0
+        if backup_seq is not None:
+            self.sequence = backup_seq
+        input_sequence = copy.deepcopy(self.sequence)
+
+        num_steps = self.num_steps  # change this for shorter/longer sequences
+        temperature = self.temperature
         # Set the start time to begin on the next step after the last note ends.
+
         last_end_time = (max(n.end_time for n in input_sequence.notes)
-                  if input_sequence.notes else 0)
+                if input_sequence.notes else 0)
         qpm = input_sequence.tempos[0].qpm
+
+        input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
+        primer_sequence_steps = input_sequence.total_quantized_steps
+
+        if primer_sequence_steps > num_steps:
+            # easier to make num_steps bigger to accommodate for sizes
+            # 4 times the size of original sequence..
+            num_steps = primer_sequence_steps * 4
+
+        mm.infer_chords_for_sequence(input_sequence)
+        raw_chord_string = ""
+        for annotation in input_sequence.text_annotations:
+            if annotation.annotation_type == CHORD_SYMBOL:
+                chord_name = annotation.text
+                raw_chord_string += f'{chord_name} '
+        raw_chord_string = raw_chord_string[:-1]
+
+        raw_chords = raw_chord_string.split()
+        repeated_chords = [chord for chord in raw_chords
+                           for _ in range(16)] * self.phrase_num
+        self.backing_chords = mm.ChordProgression(repeated_chords)
 
         chord_sequence = self.backing_chords.to_sequence(sequence_start_time=0.0, qpm=qpm)
 
         for text_annotation in chord_sequence.text_annotations:
             if text_annotation.annotation_type == CHORD_SYMBOL:
-                chord = input_sequence.text_annotations.add()
+                chord = self.sequence.text_annotations.add()
                 chord.CopyFrom(text_annotation)
 
         seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
+
         total_seconds = len(self.backing_chords) * seconds_per_step
-        input_sequence.total_time = len(self.backing_chords) * seconds_per_step
+        self.sequence.total_time = total_seconds
 
         generator_options = generator_pb2.GeneratorOptions()
         generator_options.args['temperature'].float_value = temperature
@@ -126,7 +178,7 @@ class ImprovRNN(MambaMagentaModel):
             start_time=last_end_time + seconds_per_step,
             end_time=total_seconds)
 
-        sequence = self.model.generate(input_sequence, generator_options)
+        sequence = self.model.generate(self.sequence, generator_options)
         renderer = mm.BasicChordRenderer(velocity=CHORD_VELOCITY)
         renderer.render(sequence)
         generated_sequence_2_mp3(sequence, f"{self.model_name}{self.counter}")
@@ -134,17 +186,23 @@ class ImprovRNN(MambaMagentaModel):
 
 class MusicVAE(MambaMagentaModel):
     """
-    Now this is a unique model.
-    """
-    def __init__(self, args):
-        super(MusicVAE, self).__init__(args)
-        self.get_model()
+    ## Music Variational Autoencoder
+    Paper at: https://arxiv.org/abs/1803.05428
 
+    Now this is a unique model. And definitely the fan favorite.
+
+    """
+    def __init__(self, args=None, is_conditioned=True, info=None,
+                 is_empty_model=False):
+        super(MusicVAE, self).__init__(args, info, is_empty_model=is_empty_model)
+        self.get_model()
+        self.is_conditioned = is_conditioned
         self.initialize()
 
     def slerp(self, p0, p1, t):
         """
-        Spherical linear interpolation in the latent space
+        Spherical linear interpolation in the latent space, will help decode
+        and generate the models later on.
         """
         omega = np.arccos(np.dot(np.squeeze(p0/np.linalg.norm(p0)), np.squeeze(p1/np.linalg.norm(p1))))
         so = np.sin(omega)
@@ -198,14 +256,46 @@ class MusicVAE(MambaMagentaModel):
         os.chdir("..")
 
     def initialize(self):
-        config = configs.CONFIG_MAP['hier-multiperf_vel_1bar_med_chords']
+        if self.is_conditioned:
+            config_string = 'hier-multiperf_vel_1bar_med_chords'
+            ckpt_string = 'model_chords_fb64.ckpt'
+
+        else:
+            config_string = 'hier-multiperf_vel_1bar_med'
+            ckpt_string = 'model_fb256.ckpt'
+
+        config = configs.CONFIG_MAP[config_string]
         self.model = TrainedModel(
                         config, batch_size=BATCH_SIZE,
-                        checkpoint_dir_or_path='models/model_chords_fb64.ckpt')
+                        checkpoint_dir_or_path=f'models/{ckpt_string}')
 
-    def generate(self, empty=False, chords=['C', 'G', 'A', 'E', 'C' 'G'],
-                 num_bars=64, temperature=0.2):
+        if not self.is_conditioned:
+            self.model._config.data_converter._max_tensors_per_input = None
+
+    def generate(self, empty=False,
+                 num_bars=64, temperature=0.5, backup_seq=None,
+                 chord_arr=None):
         # Interpolation, Repeating Chord Progression
+        if chord_arr is None:
+            if backup_seq is not None:
+                self.sequence = backup_seq
+
+            if hasattr(self, 'temperature'):
+                temperature = self.temperature
+            copy_sequence = copy.deepcopy(self.sequence)
+
+            quantized_sequence = mm.quantize_note_sequence(copy_sequence, 8)
+            # infer chords for sequence is a bit more natural
+            mm.infer_chords_for_sequence(quantized_sequence)
+
+            chords = []
+            for annotation in quantized_sequence.text_annotations:
+                if annotation.annotation_type == CHORD_SYMBOL:
+                    chord_name = annotation.text
+                    chords.append(chord_name)
+        else:
+            # follow a user defined chord progression
+            chords = chord_arr
 
         z1 = np.random.normal(size=[Z_SIZE])
         z2 = np.random.normal(size=[Z_SIZE])
@@ -222,6 +312,10 @@ class MusicVAE(MambaMagentaModel):
         prog_ns = concatenate_sequences(seqs)
         generated_sequence_2_mp3(prog_ns, f"{self.model_name}{self.counter}")
 
+    def trim_sequence(self, seq, num_seconds=12.0):
+        seq = mm.extract_subsequence(seq, 0.0, num_seconds)
+        seq.total_time = num_seconds
+
 
 class PianoPerformanceLanguageModelProblem(score2perf.Score2PerfProblem):
     @property
@@ -236,8 +330,16 @@ class MelodyToPianoPerformanceProblem(score2perf.AbsoluteMelody2PerfProblem):
 
 
 class MusicTransformer(MambaMagentaModel):
-    def __init__(self, args, is_conditioned=False):
-        super(MusicTransformer, self).__init__(args)
+    """
+    Music Transformer model.
+
+    Can be "primed" with a melody, and
+    helps provide accompaniment.
+    """
+    def __init__(self, args=None, is_conditioned=False, info=None,
+                 is_empty_model=False):
+        super(MusicTransformer, self).__init__(args, info,
+                                               is_empty_model=is_empty_model)
         self.get_model()
 
         self.initialize(is_conditioned)
@@ -331,36 +433,80 @@ class MusicTransformer(MambaMagentaModel):
                 'decode_length': np.array(self.decode_length, dtype=np.int32)
             }
 
-    def generate(self, empty=False):
+    def failsafe(self):
+        melodies = {
+                'Mary Had a Little Lamb': [
+                    64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
+                    62, 62, 62, mm.MELODY_NO_EVENT,
+                    64, 67, 67, mm.MELODY_NO_EVENT,
+                    64, 62, 60, 62, 64, 64, 64, 64,
+                    62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Row Row Row Your Boat': [
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    60, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    64, mm.MELODY_NO_EVENT, 65,
+                    67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
+                    67, mm.MELODY_NO_EVENT, 65,
+                    64, mm.MELODY_NO_EVENT, 62,
+                    60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
+                    mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
+                ],
+                'Twinkle Twinkle Little Star': [
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
+                    60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
+                    65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT
+                ]
+            }
+        event_padding = 2 * [mm.MELODY_NO_EVENT]
+
+        rand_key = np.random.choice(list(melodies.keys()))
+
+        # Use one of the provided melodies.
+        events = [event + 12 if event != mm.MELODY_NO_EVENT else event
+                  for e in melodies[rand_key]
+                  for event in [e] + event_padding]
+        self.inputs = self.encoders['inputs'].encode(
+            ' '.join(str(e) for e in events))
+
+    def generate(self):
+        # based on i
         self.targets = []
         self.decode_length = 1024
 
         # Generate sample events.
         sample_ids = next(self.samples)['outputs']
-        print(sample_ids)
         # Decode to NoteSequence.
         midi_filename = self.decode(
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-        print(unconditional_ns)
         generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
 
-    def generate_primer(self, filename='C major scale'):
+    def generate_primer(self):
         """
         Put something important here.
 
         """
-        filenames = {
-            'C major arpeggio': 'models/primers/c_major_arpeggio.mid',
-            'C major scale': 'models/primers/c_major_scale.mid',
-            'Clair de Lune': 'models/primers/clair_de_lune.mid',
-        }
-        if filename not in filenames.keys():
-            keys2list = list(filenames.keys())
-            raise ValueError(f"Choose from {keys2list}")
+        if self.conditioned:
+            raise ValueError("Should be using an unconditioned model!")
 
-        primer_ns = mm.midi_file_to_note_sequence(filenames[filename])
+        primer_ns = self.sequence
         primer_ns = mm.apply_sustain_control_changes(primer_ns)
         max_primer_seconds = 20
 
@@ -400,66 +546,33 @@ class MusicTransformer(MambaMagentaModel):
 
         generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}")
 
-    def generate_basic_notes(self, melody='Twinkle Twinkle Little Star', qpm=160):
+    def generate_basic_notes(self, qpm=160, failsafe=False):
         """
         Requires melody conditioned model.
         """
         if not self.conditioned:
             raise ValueError("Model should be conditioned!")
 
-        event_padding = 2 * [mm.MELODY_NO_EVENT]
+        if failsafe:
+            self.failsafe()
+        else:
+            melody_ns = copy.deepcopy(self.sequence)
+            try:
+                melody_instrument = mm.infer_melody_for_sequence(melody_ns)
+                notes = [note for note in melody_ns.notes
+                        if note.instrument == melody_instrument]
 
-        melodies = {
-            'Mary Had a Little Lamb': [
-                64, 62, 60, 62, 64, 64, 64, mm.MELODY_NO_EVENT,
-                62, 62, 62, mm.MELODY_NO_EVENT,
-                64, 67, 67, mm.MELODY_NO_EVENT,
-                64, 62, 60, 62, 64, 64, 64, 64,
-                62, 62, 64, 62, 60, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-            ],
-            'Row Row Row Your Boat': [
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                60, mm.MELODY_NO_EVENT, 62,
-                64, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                64, mm.MELODY_NO_EVENT, 62,
-                64, mm.MELODY_NO_EVENT, 65,
-                67, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                72, 72, 72, 67, 67, 67, 64, 64, 64, 60, 60, 60,
-                67, mm.MELODY_NO_EVENT, 65,
-                64, mm.MELODY_NO_EVENT, 62,
-                60, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT,
-                mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT, mm.MELODY_NO_EVENT
-            ],
-            'Twinkle Twinkle Little Star': [
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                67, 67, 65, 65, 64, 64, 62, mm.MELODY_NO_EVENT,
-                60, 60, 67, 67, 69, 69, 67, mm.MELODY_NO_EVENT,
-                65, 65, 64, 64, 62, 62, 60, mm.MELODY_NO_EVENT       
-            ]
-        }
-        if melody not in melodies.keys():
-            keys2list = list(melodies.keys())
-            raise ValueError(f"Choose from {keys2list}")
-
-        # Use one of the provided melodies.
-        events = [event + 12 if event != mm.MELODY_NO_EVENT else event
-                  for e in melodies[melody]
-                  for event in [e] + event_padding]
-
-        self.inputs = self.encoders['inputs'].encode(
-            ' '.join(str(e) for e in events))
-        melody_ns = mm.Melody(events).to_sequence(qpm=160)
+                melody_ns.notes.extend(
+                    sorted(notes, key=lambda note: note.start_time))
+                for i in range(len(melody_ns.notes) - 1):
+                    melody_ns.notes[i].end_time = melody_ns.notes[i + 1].start_time
+                self.inputs = self.encoders['inputs'].encode_note_sequence(
+                            melody_ns)
+                print("Melody successfully parsed and encoded!")
+            except Exception as e:
+                print(f"Error in encoding stage {e}")
+                print("Resorting to a basic melody")
+                self.failsafe()
 
         self.decode_length = 4096
         sample_ids = next(self.samples)['outputs']
@@ -471,9 +584,3 @@ class MusicTransformer(MambaMagentaModel):
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
         generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}")
-
-
-if __name__ == '__main__':
-    args = parse_arguments()
-    model = MusicTransformer(args, True)
-    model.generate_basic_notes()
