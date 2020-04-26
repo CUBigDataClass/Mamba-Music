@@ -79,6 +79,7 @@ class LakhDataset():
         gets cleaned midis of files.
         """
         tarname = 'clean_midi.tar.gz'
+        os.makedirs('data', exist_ok=True)
         if os.path.isdir(os.path.join(os.getcwd(), self.main_dir)):
             print('MIDI data already exists! Skipping download...')
 
@@ -87,7 +88,7 @@ class LakhDataset():
 
             # using wget will show progress of download instead of seeming to hang.
             os.system(f'wget {url}')
-            shutil.move(tarname, 'data')
+            shutil.move(tarname, 'data/')
             my_tar = tarfile.open(self.main_dir)
             my_tar.extractall('data/')
             my_tar.close()
