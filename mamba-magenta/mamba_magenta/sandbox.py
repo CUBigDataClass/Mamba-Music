@@ -14,17 +14,6 @@ import const as C
 from magenta.music.protobuf import music_pb2
 
 
-# artist 2 actual model
-# ARTIST2MODEL = {
-#     'Melody': MelodyRNN,
-#     'Performance': PerformanceRNN,
-#     'Polyphony': PolyphonyRNN,
-#     'Improv': ImprovRNN,
-#     'PianoRollNade': PianoRollRNNNade,
-#     'MusicVAE': MusicVAE,
-#     'MusicTransformer': MusicTransformer
-# }
-
 
 def dict_2_note_seq(music_dict):
     """
@@ -37,7 +26,6 @@ def dict_2_note_seq(music_dict):
         'tempo': int
         'temperature': int
         'genre': str
-        'velocity_variance': int
         'num_steps': int
     }
     """
@@ -62,7 +50,6 @@ structure of json:
     'temperature': int
     'genre': str
     'tempo': int
-    'velocity_variance': int
     'num_steps': int
 }
 Genre is the most important aspect of this message. It isn't directly
@@ -77,8 +64,7 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
     music_dict = {
         'tempo': 80.0,
         'temperature': 1.0,
-        'num_steps': 2560,
-        'velocity_variance': 0.5
+        'num_steps': 2560
     }
     backup_sequence = None
     basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
@@ -200,8 +186,8 @@ if __name__ == '__main__':
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres  #+ ["cool_chords"]
     genre = np.random.choice(genres)
-    genre = "cool_chords"
-    model_string = "music_vae"
+    # genre = "cool_chords"
+    model_string = "melody_rnn"
 
     try:
         if genre == "cool_chords" and model_string == "music_vae":

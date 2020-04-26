@@ -97,7 +97,7 @@ class MambaMagentaModel():
         """
         Initializes the standard model.
         """
-        print("Initializing {name}...")
+        print(f"Initializing {name}...")
         bundle = sequence_generator_bundle.read_bundle_file(os.path.join(os.getcwd(), "models", f"{self.model_name}.mag"))
 
         generator_map = sequence_generator.get_generator_map()
