@@ -1,6 +1,6 @@
-import numpy as np
 
 
+# values go from 0 to 27
 class MixInstrumentation():
     """
     works with midi files to mix up instrumentation a bit ...

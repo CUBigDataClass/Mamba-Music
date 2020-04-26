@@ -49,7 +49,7 @@ class MelodyRNN(MambaMagentaModel):
     Generates a one line melody
     with the input sequence as a primer.
     """
-    def __init__(self, args, model_string="basic", info=None):
+    def __init__(self, args=None, model_string="basic", info=None):
         super(MelodyRNN, self).__init__(args, info)
         options = ["basic", "mono", "lookback", "attention"]
 
@@ -64,7 +64,7 @@ class PerformanceRNN(MambaMagentaModel):
     Not super music, just playing around.
 
     """
-    def __init__(self, args, model_string="performance_with_dynamics", info=None):
+    def __init__(self, args=None, model_string="performance_with_dynamics", info=None):
         super(PerformanceRNN, self).__init__(args, info=info)
         options = ["performance", "performance_with_dynamics",
                    "performance_with_dynamics_and_modulo_encoding",
@@ -84,7 +84,7 @@ class PolyphonyRNN(MambaMagentaModel):
     Music slightly akin to Bach
 
     """
-    def __init__(self, args, model_string="polyphony", info=None):
+    def __init__(self, args=None, model_string="polyphony", info=None):
         super(PolyphonyRNN, self).__init__(args, info=info)
         options = ["polyphony"]
         self.get_standard_model(model_string, "polyphony_rnn", options)
@@ -96,7 +96,7 @@ class PianoRollRNNNade(MambaMagentaModel):
     """
     A bit of a more intriguing model.
     """
-    def __init__(self, args, model_string="pianoroll_rnn_nade", info=None):
+    def __init__(self, args=None, model_string="pianoroll_rnn_nade", info=None):
         super(PianoRollRNNNade, self).__init__(args, info=info)
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
         self.get_standard_model(model_string, model_string, options)
@@ -121,39 +121,38 @@ class ImprovRNN(MambaMagentaModel):
 
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
 
-    def generate(self, empty=False, backup_seq=None, raw_chord_string=None):
+    def generate(self, empty=False, backup_seq=None):
         """
         different implementation is needed for improv rnn's
         generation function.
         """
-        if raw_chord_string is None:
-            if backup_seq is not None:
-                self.sequence = backup_seq
-            input_sequence = copy.deepcopy(self.sequence)
+        if backup_seq is not None:
+            self.sequence = backup_seq
+        input_sequence = copy.deepcopy(self.sequence)
 
-            num_steps = self.num_steps  # change this for shorter/longer sequences
-            temperature = self.temperature
-            # Set the start time to begin on the next step after the last note ends.
+        num_steps = self.num_steps  # change this for shorter/longer sequences
+        temperature = self.temperature
+        # Set the start time to begin on the next step after the last note ends.
 
-            last_end_time = (max(n.end_time for n in input_sequence.notes)
-                    if input_sequence.notes else 0)
-            qpm = input_sequence.tempos[0].qpm
+        last_end_time = (max(n.end_time for n in input_sequence.notes)
+                if input_sequence.notes else 0)
+        qpm = input_sequence.tempos[0].qpm
 
-            input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
-            primer_sequence_steps = input_sequence.total_quantized_steps
+        input_sequence = mm.quantize_note_sequence(input_sequence, self.model.steps_per_quarter)
+        primer_sequence_steps = input_sequence.total_quantized_steps
 
-            if primer_sequence_steps > num_steps:
-                # easier to make num_steps bigger to accommodate for sizes
-                # 4 times the size of original sequence..
-                num_steps = primer_sequence_steps * 4
+        if primer_sequence_steps > num_steps:
+            # easier to make num_steps bigger to accommodate for sizes
+            # 4 times the size of original sequence..
+            num_steps = primer_sequence_steps * 4
 
-            mm.infer_chords_for_sequence(input_sequence)
-            raw_chord_string = ""
-            for annotation in input_sequence.text_annotations:
-                if annotation.annotation_type == CHORD_SYMBOL:
-                    chord_name = annotation.text
-                    raw_chord_string += f'{chord_name} '
-            raw_chord_string = raw_chord_string[:-1]
+        mm.infer_chords_for_sequence(input_sequence)
+        raw_chord_string = ""
+        for annotation in input_sequence.text_annotations:
+            if annotation.annotation_type == CHORD_SYMBOL:
+                chord_name = annotation.text
+                raw_chord_string += f'{chord_name} '
+        raw_chord_string = raw_chord_string[:-1]
 
         raw_chords = raw_chord_string.split()
         repeated_chords = [chord for chord in raw_chords
@@ -193,11 +192,11 @@ class MusicVAE(MambaMagentaModel):
     Now this is a unique model. And definitely the fan favorite.
 
     """
-    def __init__(self, args=None, is_conditioned=False, info=None,
+    def __init__(self, args=None, is_conditioned=True, info=None,
                  is_empty_model=False):
         super(MusicVAE, self).__init__(args, info, is_empty_model=is_empty_model)
         self.get_model()
-
+        self.is_conditioned = is_conditioned
         self.initialize()
 
     def slerp(self, p0, p1, t):
@@ -257,13 +256,24 @@ class MusicVAE(MambaMagentaModel):
         os.chdir("..")
 
     def initialize(self):
-        config = configs.CONFIG_MAP['hier-multiperf_vel_1bar_med_chords']
+        if self.is_conditioned:
+            config_string = 'hier-multiperf_vel_1bar_med_chords'
+            ckpt_string = 'model_chords_fb64.ckpt'
+
+        else:
+            config_string = 'hier-multiperf_vel_1bar_med'
+            ckpt_string = 'model_fb256.ckpt'
+
+        config = configs.CONFIG_MAP[config_string]
         self.model = TrainedModel(
                         config, batch_size=BATCH_SIZE,
-                        checkpoint_dir_or_path='models/model_chords_fb64.ckpt')
+                        checkpoint_dir_or_path=f'models/{ckpt_string}')
+
+        if not self.is_conditioned:
+            self.model._config.data_converter._max_tensors_per_input = None
 
     def generate(self, empty=False,
-                 num_bars=64, temperature=0.2, backup_seq=None,
+                 num_bars=64, temperature=0.5, backup_seq=None,
                  chord_arr=None):
         # Interpolation, Repeating Chord Progression
         if chord_arr is None:
@@ -301,6 +311,10 @@ class MusicVAE(MambaMagentaModel):
         self.fix_instruments_for_concatenation(seqs)
         prog_ns = concatenate_sequences(seqs)
         generated_sequence_2_mp3(prog_ns, f"{self.model_name}{self.counter}")
+
+    def trim_sequence(self, seq, num_seconds=12.0):
+        seq = mm.extract_subsequence(seq, 0.0, num_seconds)
+        seq.total_time = num_seconds
 
 
 class PianoPerformanceLanguageModelProblem(score2perf.Score2PerfProblem):
@@ -570,4 +584,3 @@ class MusicTransformer(MambaMagentaModel):
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
         generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}")
-
