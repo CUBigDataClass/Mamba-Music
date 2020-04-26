@@ -509,7 +509,7 @@ class MusicTransformer(MambaMagentaModel):
 
         primer_ns = self.sequence
         primer_ns = mm.apply_sustain_control_changes(primer_ns)
-        max_primer_seconds = 20
+        max_primer_seconds = 10
 
         if primer_ns.total_time > max_primer_seconds:
             print(f'Primer is longer than {max_primer_seconds} seconds, truncating.')
@@ -533,6 +533,7 @@ class MusicTransformer(MambaMagentaModel):
         # Remove the end token from the encoded primer.
         self.targets = self.targets[:-1]
         self.decode_length = max(0, 4096 - len(self.targets))
+
         if len(self.targets) >= 4096:
             print('Primer has more events than maximum sequence length; nothing will be generated.')
         # Generate sample events.

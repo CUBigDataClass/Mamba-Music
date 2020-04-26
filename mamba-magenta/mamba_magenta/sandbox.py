@@ -157,22 +157,20 @@ def create_music(model_string, info):
     else:
         # defaults to music transformer variants
         idx = np.random.randint(0, 2)
-        if idx == 0:
+        if idx == 10:
             model = MusicTransformer(None, is_conditioned=False, info=music_dict)
             model.generate()
         else:
             try:
-                model = MusicTransformer(None, is_conditioned=True, info=music_dict)
-
-                # resort to rudimentary 1 of 3 melodies
-                model.generate_basic_notes()
+                model = MusicTransformer(None, is_conditioned=False, info=music_dict)
+                model.generate_primer()
                 # model = MusicTransformer(None, is_conditioned=False, info=music_dict)
-                # model.generate_primer()
             except Exception as e:
+                print(e)
+                exit()
+                print("Resorting to conditioned model here...")
                 model = MusicTransformer(None, is_conditioned=True, info=music_dict)
-
-                # resort to rudimentary 1 of 3 melodies
-                model.generate_basic_notes()
+                model.generate_primer()
 
 
 def generate_cool_chords(model_string, chord_arr):
@@ -187,7 +185,7 @@ if __name__ == '__main__':
     genres = dataset.genres  #+ ["cool_chords"]
     genre = np.random.choice(genres)
     # genre = "cool_chords"
-    model_string = "music_vae"
+    model_string = "music_transformer"
 
     try:
         if genre == "cool_chords" and model_string == "music_vae":
