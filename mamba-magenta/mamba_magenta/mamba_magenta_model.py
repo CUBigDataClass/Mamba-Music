@@ -125,12 +125,11 @@ class MambaMagentaModel():
 
         qpm = input_sequence.tempos[0].qpm
         if steps_per_second_avail:
+            steps_per_quarter = int(self.model.steps_per_second * (1 /(qpm / 60)))
             seconds_per_step = 1 / self.model.steps_per_second
-            steps_per_quarter = (seconds_per_step * qpm) / 60.0
         else:
             seconds_per_step = 60.0 / qpm / self.model.steps_per_quarter
             steps_per_quarter = self.model.steps_per_quarter
-
         quantized_sequence = mm.quantize_note_sequence(input_sequence, steps_per_quarter)
 
         last_end_time = (max(n.end_time for n in input_sequence.notes)

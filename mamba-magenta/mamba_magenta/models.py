@@ -75,8 +75,9 @@ class PerformanceRNN(MambaMagentaModel):
 
         self.initialize("Performance RNN", performance_sequence_generator)
 
-    def generate(self):
-        super(PerformanceRNN, self).generate(steps_per_second_avail=True)
+    def generate(self, empty=False):
+        super(PerformanceRNN, self).generate(steps_per_second_avail=True,
+                                             empty=empty)
 
 
 class PolyphonyRNN(MambaMagentaModel):
