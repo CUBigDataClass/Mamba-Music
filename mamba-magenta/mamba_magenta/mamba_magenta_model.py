@@ -152,7 +152,7 @@ class MambaMagentaModel():
 
         self.output_sequence = self.model.generate(input_sequence, generator_options)
 
-        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{self.counter}")
+        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{self.counter}", use_salamander=True)
 
     def parse_yaml(self, config_dir, config_filename):
         """

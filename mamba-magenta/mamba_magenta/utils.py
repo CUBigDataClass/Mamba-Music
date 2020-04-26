@@ -46,7 +46,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def     generated_sequence_2_mp3(seq, filename, dirs="songs"):
+def generated_sequence_2_mp3(seq, filename, dirs="songs", use_salamander=False):
     """
     generates note sequence `seq` to an mp3 file, with the name
     `filename` in directory(ies) `dir`.
@@ -55,7 +55,11 @@ def     generated_sequence_2_mp3(seq, filename, dirs="songs"):
     song_path = os.path.join(dirs, filename)
     # convert from note sequence to midi file.
     mm.sequence_proto_to_midi_file(seq, f'{song_path}.mid')
-    fs = FluidSynth()
+    if use_salamander:
+        fs = FluidSynth('~/.fluidsynth/salamander.sf2')
+    else:
+        fs = FluidSynth()
+
 
     fs.midi_to_audio(f'{song_path}.mid', f'{song_path}.mp3')
     # remove midi file for bookkeeping.

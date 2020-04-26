@@ -497,7 +497,7 @@ class MusicTransformer(MambaMagentaModel):
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}")
+        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}", use_salamander=True)
 
     def generate_primer(self):
         """
@@ -545,7 +545,7 @@ class MusicTransformer(MambaMagentaModel):
         # Append continuation to primer.
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
-        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}")
+        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}", use_salamander=True)
 
     def generate_basic_notes(self, qpm=160, failsafe=False):
         """
@@ -584,4 +584,4 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}")
+        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}", use_salamander=True)
