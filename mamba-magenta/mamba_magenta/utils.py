@@ -1,7 +1,8 @@
 import argparse
 import magenta.music as mm
 from magenta.music.protobuf import music_pb2
-
+import numpy as np
+import pretty_midi
 
 from midi2audio import FluidSynth
 import os
@@ -59,11 +60,34 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs"):
     # remove midi file for bookkeeping.
     os.remove(f'{song_path}.mid')
 
-# def genre_2_sequence(genre):
-#     """
-#     converts a genre to a basic sequence.
-#     """
-#     sequence = music_pb2.NoteSequence()
-#     if genre == "classical":
-#         pass
-#     elif genre == "hip-hop  ":
+def create_chords(chord_list):
+    nums = []
+    all_keys = np.zeros((12, len(chord_list)))
+    for i, chord in enumerate(chord_list):
+        chord_root = chord.split()[0][0]
+        nums.append(chord_root)
+        num = pretty_midi.key_name_to_key_number(chord_root)
+        all_keys[0, i] = num
+
+        for i in range(1, 12):
+            all_keys[i] = (all_keys[i-1] + 1) % 12
+    all_transposes = []
+    for i in range(all_keys.shape[0]):
+        progression = []
+        for j in range(all_keys.shape[1]):
+            root = pretty_midi.key_number_to_key_name(int(all_keys[i, j]))
+            if root[1] == 'b':
+                take = root[:2]
+            else:
+                take = root[0]
+            chord_type = chord_list[j][1:]
+            progression.append(f'{take}{chord_type}')
+        all_transposes.append(progression)
+    return all_transposes
+
+
+def construct_all_from_chord_progressions(chord_progressions):
+    all_chord_progressions = []
+    for chord_progression in chord_progressions:
+        all_chord_progressions.extend(create_chords(chord_progression))
+    return all_chord_progressions
