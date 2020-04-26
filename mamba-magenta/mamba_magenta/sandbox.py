@@ -187,7 +187,7 @@ if __name__ == '__main__':
     genres = dataset.genres  #+ ["cool_chords"]
     genre = np.random.choice(genres)
     # genre = "cool_chords"
-    model_string = "polyphony_rnn"
+    model_string = "music_vae"
 
     try:
         if genre == "cool_chords" and model_string == "music_vae":
