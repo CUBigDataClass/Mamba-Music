@@ -568,6 +568,9 @@ class MusicTransformer(MambaMagentaModel):
                     sorted(notes, key=lambda note: note.start_time))
                 for i in range(len(melody_ns.notes) - 1):
                     melody_ns.notes[i].end_time = melody_ns.notes[i + 1].start_time
+
+                # sequence can only be one min to save time during inference.
+                melody_ns = mm.extract_subsequence(melody_ns, 0, 60)
                 self.inputs = self.encoders['inputs'].encode_note_sequence(
                             melody_ns)
                 print("Melody successfully parsed and encoded!")
@@ -585,4 +588,6 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{self.counter}", use_salamander=True)
+        generated_sequence_2_mp3(accompaniment_ns,
+                                 f"{self.model_name}{self.counter}",
+                                 use_salamander=True)
