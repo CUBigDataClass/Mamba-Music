@@ -92,7 +92,7 @@ class LakhDataset():
             my_tar = tarfile.open(f'data/{tarname}')
             my_tar.extractall('data/')
             my_tar.close()
-            os.remove('data/{tarname}')
+            os.remove(f'data/{tarname}')
 
     def get_genres_from_folders(self, dir_name='clean_midi'):
         if self.loaded:
