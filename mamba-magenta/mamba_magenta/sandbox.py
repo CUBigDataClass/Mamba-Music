@@ -14,32 +14,6 @@ import const as C
 from magenta.music.protobuf import music_pb2
 
 
-
-def dict_2_note_seq(music_dict):
-    """
-    converts a dictionary (was originally json)
-    into a note sequence for later use.
-
-    structure of json:
-    {
-        'artist': str
-        'tempo': int
-        'temperature': int
-        'genre': str
-        'num_steps': int
-    }
-    """
-    ordered_keys = sorted(list(music_dict.keys()))
-    validate_info(music_dict, ordered_keys,
-                  [str, str, float, int, float, float])
-    artist = music_dict['artist']
-
-    # if artist not in ARTIST2MODEL.keys():
-    #     keys2list = list(ARTIST2MODEL.keys())
-    #     raise KeyError(f'{artist} not in {keys2list}.')
-    # model = ARTIST2MODEL[artist]
-
-
 """
 structure of json:
 
@@ -129,12 +103,6 @@ def render_sequence_to_music_dict(midi_file, music_dict,
     return music_dict
 
 
-def validate_info(info_dict, keys, types_list):
-    for idx, key in enumerate(keys):
-        if type(info_dict[key]) != types_list[idx]:
-            raise TypeError(f'Incorrect type provided for key {key}.')
-
-
 def create_music(model_string, info):
     """
     creates the music. The real deal.
@@ -197,15 +165,24 @@ if __name__ == '__main__':
 
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres
-    genre = np.random.choice(genres)
 
     music_dict = {
         'temperature': 1.0,
-        'length': 1
+        'length': 1,
+        'artist': 'music_transformer',
+        'genre': 'random'
     }
 
+    if music_dict['genre'] == 'random':
+        genre = np.random.choice(genres)
+    else:
+        if music_dict['genre'] not in genres:
+            genre = np.random.choice(genres)
+        else:
+            pass
+
     # genre = "wild_card"
-    model_string = "music_transformer"
+    model_string = music_dict['artist']
     special_models = ["music_transformer", "music_vae"]
 
     try:
@@ -216,8 +193,6 @@ if __name__ == '__main__':
             raise ValueError("Can't use cool chords with other models!")
 
         else:
-            # cool_chords not valid
-
             midi_file = np.random.choice(dataset[genre])
             music_dict = render_sequence_to_music_dict(midi_file, music_dict,
                                                        model_string)
