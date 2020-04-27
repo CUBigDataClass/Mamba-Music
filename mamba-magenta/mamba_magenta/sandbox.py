@@ -73,14 +73,12 @@ def generate_from_best_models(model_string):
         generate_cool_chords(model_string, chord_selection)
 
 
-
-def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
+def render_sequence_to_music_dict(midi_file, music_dict,
+                                  model_string="melody_rnn"):
     sequence = mm.midi_file_to_note_sequence(midi_file)
-    music_dict = {
-        'tempo': 80.0,
-        'temperature': 1.0,
-        'num_steps': 2560
-    }
+
+    # scale to num steps.
+    music_dict['num_steps'] = 1024 * music_dict['length']
     backup_sequence = None
     basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
                     "pianoroll_rnn_nade"]
@@ -123,6 +121,7 @@ def render_sequence_to_music_dict(midi_file, model_string="melody_rnn"):
         backup_sequence.tempos.add(qpm=60)
         music_dict['sequence'] = subsequence
         music_dict['backup_sequence'] = backup_sequence
+
     elif model_string == "music_transformer":
         # model generate will take care of things
         music_dict['sequence'] = sequence
@@ -197,11 +196,18 @@ def generate_cool_chords(model_string, chord_arr):
 if __name__ == '__main__':
 
     dataset = LakhDataset(already_scraped=True)
-    genres = dataset.genres  #+ ["cool_chords"]
+    genres = dataset.genres
     genre = np.random.choice(genres)
+
+    music_dict = {
+        'temperature': 1.0,
+        'length': 1
+    }
+
     # genre = "wild_card"
     model_string = "music_transformer"
     special_models = ["music_transformer", "music_vae"]
+
     try:
         if genre == "wild_card" and model_string in special_models:
             # we can generate cool chords only on these conditions.
@@ -213,7 +219,8 @@ if __name__ == '__main__':
             # cool_chords not valid
 
             midi_file = np.random.choice(dataset[genre])
-            music_dict = render_sequence_to_music_dict(midi_file, model_string)
+            music_dict = render_sequence_to_music_dict(midi_file, music_dict,
+                                                       model_string)
             create_music(model_string, music_dict)
     except Exception as e:
         # if for some reason something fails, give the people what they want.

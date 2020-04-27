@@ -27,7 +27,6 @@ class MambaMagentaModel():
             pass
         elif info is not None:
             # info will be a dict with the essential information
-            self.tempo = info['tempo']
             self.temperature = info['temperature']
             self.sequence = info['sequence']
             self.num_steps = info['num_steps']
