@@ -126,12 +126,12 @@ def lambda_handler(event, context):
         'GET': lambda x: get(x),
         'PUT': lambda x: put(x),
     }
+    
 
-    operation = event['requestContext']['http']['method']
+    operation = event['httpMethod']
+
     if operation in operations:
-        payload = json.loads(event['body'])
-        if operation != 'PUT':
-            payload = payload['queryStringParameters']
+        payload = event['queryStringParameters'] if operation != 'PUT' else json.loads(event['body'])
         if not 'CustomerId' in payload:
             return respond('No CustomerId specified')
         else:
