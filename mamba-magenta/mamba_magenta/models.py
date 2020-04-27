@@ -29,6 +29,9 @@ from tensor2tensor.utils import trainer_lib
 
 from magenta.models.score2perf import score2perf
 
+
+import uuid
+
 CHORD_SYMBOL = music_pb2.NoteSequence.TextAnnotation.CHORD_SYMBOL
 
 # Velocity at which to play chord notes when rendering chords.
@@ -128,7 +131,8 @@ class ImprovRNN(MambaMagentaModel):
         generation function.
         """
         if backup_seq is not None:
-            self.sequence = backup_seq
+            self.sequence = copy.deepcopy(backup_seq)
+
         input_sequence = copy.deepcopy(self.sequence)
 
         num_steps = self.num_steps  # change this for shorter/longer sequences
@@ -182,7 +186,8 @@ class ImprovRNN(MambaMagentaModel):
         sequence = self.model.generate(self.sequence, generator_options)
         renderer = mm.BasicChordRenderer(velocity=CHORD_VELOCITY)
         renderer.render(sequence)
-        generated_sequence_2_mp3(sequence, f"{self.model_name}{self.counter}")
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(sequence, f"{self.model_name}{unique_id}")
 
 
 class MusicVAE(MambaMagentaModel):
@@ -279,7 +284,7 @@ class MusicVAE(MambaMagentaModel):
         # Interpolation, Repeating Chord Progression
         if chord_arr is None:
             if backup_seq is not None:
-                self.sequence = backup_seq
+                self.sequence = copy.deepcopy(backup_seq)
 
             if hasattr(self, 'temperature'):
                 temperature = self.temperature
@@ -297,7 +302,7 @@ class MusicVAE(MambaMagentaModel):
         else:
             # follow a user defined chord progression
             chords = chord_arr
-
+        mod_val = len(chords)
         z1 = np.random.normal(size=[Z_SIZE])
         z2 = np.random.normal(size=[Z_SIZE])
         z = np.array([self.slerp(z1, z2, t)
@@ -305,13 +310,15 @@ class MusicVAE(MambaMagentaModel):
 
         seqs = [
             self.model.decode(length=TOTAL_STEPS, z=z[i:i+1, :], temperature=temperature,
-                        c_input=self.chord_encoding(chords[i % 4]))[0]
+                        c_input=self.chord_encoding(chords[i % mod_val]))[0]
             for i in range(num_bars)
         ]
 
         self.fix_instruments_for_concatenation(seqs)
         prog_ns = concatenate_sequences(seqs)
-        generated_sequence_2_mp3(prog_ns, f"{self.model_name}{self.counter}")
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(prog_ns, f"{self.model_name}{unique_id}")
+
 
     def trim_sequence(self, seq, num_seconds=12.0):
         seq = mm.extract_subsequence(seq, 0.0, num_seconds)
@@ -497,7 +504,8 @@ class MusicTransformer(MambaMagentaModel):
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{self.counter}", use_salamander=True)
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{unique_id}", use_salamander=True)
 
     def generate_primer(self):
         """
@@ -546,7 +554,8 @@ class MusicTransformer(MambaMagentaModel):
         # Append continuation to primer.
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
-        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{self.counter}", use_salamander=True)
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{unique_id}", use_salamander=True)
 
     def generate_basic_notes(self, qpm=160, failsafe=False):
         """
@@ -557,6 +566,7 @@ class MusicTransformer(MambaMagentaModel):
 
         if failsafe:
             self.failsafe()
+
         else:
             melody_ns = copy.deepcopy(self.sequence)
             try:
@@ -588,6 +598,5 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        generated_sequence_2_mp3(accompaniment_ns,
-                                 f"{self.model_name}{self.counter}",
-                                 use_salamander=True)
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{unique_id}", use_salamander=True)
