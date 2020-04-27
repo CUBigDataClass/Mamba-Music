@@ -12,6 +12,7 @@ import numpy as np
 import magenta.music as mm
 import const as C
 from magenta.music.protobuf import music_pb2
+import copy
 
 
 """
@@ -33,24 +34,25 @@ polyphonyrnn
 """
 
 
-def generate_from_best_models(model_string):
+def generate_from_best_models(model_string, num_generations):
     """
     generates some really good music from the best models
     """
     if model_string == "music_transformer":
         model = MusicTransformer(is_empty_model=True)
-        model.generate()
+        for i in range(num_generations):
+            model.generate()
     else:
         num_chords = len(C.COOL_CHORDS)
-        idx = np.random.choice(num_chords)
-        chord_selection = C.COOL_CHORDS[idx]
-        generate_cool_chords(chord_selection)
+        for i in range(num_generations):
+            idx = np.random.choice(num_chords)
+            chord_selection = C.COOL_CHORDS[idx]
+            generate_cool_chords(chord_selection)
 
 
 def render_sequence_to_music_dict(midi_file, music_dict,
                                   model_string="melody_rnn"):
     sequence = mm.midi_file_to_note_sequence(midi_file)
-
     # scale to num steps.
     music_dict['num_steps'] = 1024 * music_dict['length']
     backup_sequence = None
@@ -103,21 +105,15 @@ def render_sequence_to_music_dict(midi_file, music_dict,
     return music_dict
 
 
-def model_generate_n_times(model, num_generations, infos):
-    model.generate()
-    for i in range(1, num_generations):
-        model.change_info(infos[i])
-        model.generate()
-
-
 def create_music(model_string, infos, num_generations):
     """
     creates the music. The real deal.
     """
-    assert infos == num_generations, "Size of infos should be the same as " \
-                                     "the number of generations!"
+    assert len(infos) == num_generations, "Size of infos should be the " \
+                                          "same as the number of generations!"
     basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
                     "pianoroll_rnn_nade"]
+    except_val = 0
     if model_string in basic_models:
         if model_string == "melody_rnn":
             model = MelodyRNN(info=infos[0])
@@ -129,11 +125,15 @@ def create_music(model_string, infos, num_generations):
             # rnn nade model
             model = PianoRollRNNNade(info=infos[0])
         try:
-            model_generate_n_times(model, num_generations, infos)
+            model.generate()
+            for i in range(1, num_generations):
+                except_val += 1
+                model.change_info(infos[i])
+                model.generate()
 
         except Exception as e:
-            print(e)
-            for i in range(1, num_generations):
+            print("ERROR", e)
+            for i in range(except_val, num_generations):
                 model.generate(empty=True)
 
     elif model_string == "improv_rnn" or model_string == "music_vae":
@@ -143,10 +143,15 @@ def create_music(model_string, infos, num_generations):
             model = MusicVAE(info=infos[0], is_conditioned=False)
 
         try:
-            model_generate_n_times(model, num_generations, infos)
-        except Exception as e:
-            print(e)
+            model.generate()
             for i in range(1, num_generations):
+                except_val += 1
+                model.change_info(infos[i])
+                model.generate()
+
+        except Exception as e:
+            print("ERROR", e)
+            for i in range(except_val, num_generations):
                 model.generate(backup_seq=infos[i]["backup_sequence"])
 
     else:
@@ -156,6 +161,7 @@ def create_music(model_string, infos, num_generations):
             model = MusicTransformer(info=infos[0], is_conditioned=True)
             model.generate_basic_notes()
             for i in range(1, num_generations):
+                except_val += 1
                 model.change_info(infos[i])
                 model.generate_basic_notes()
         else:
@@ -164,6 +170,8 @@ def create_music(model_string, infos, num_generations):
                 model = MusicTransformer(info=infos[0])
                 model.generate_primer()
                 for i in range(1, num_generations):
+                    except_val += 1
+
                     model.change_info(infos[i])
                     model.generate_primer()
 
@@ -171,7 +179,7 @@ def create_music(model_string, infos, num_generations):
                 print("ERROR", e)
                 print("Resorting to unconditioned model here...")
                 model = MusicTransformer(is_empty_model=True)
-                for i in range(1, num_generations):
+                for i in range(except_val, num_generations):
                     model.generate()
 
 
@@ -193,6 +201,7 @@ def generate_mm_music(music_dict):
         else:
             genre = music_dict['genre']
 
+    num_generations = music_dict['num_generations']
     model_string = music_dict['artist']
     if model_string not in C.MODELS_LIST:
         print("Invalid artist. Setting model string to music transformer")
@@ -201,16 +210,21 @@ def generate_mm_music(music_dict):
     try:
         if genre == "wild_card" and model_string in special_models:
             # we can generate cool chords only on these conditions.
-            generate_from_best_models(model_string)
+            generate_from_best_models(model_string, num_generations)
 
-        elif genre == "cool_chords" and model_string != "music_vae":
+        elif genre == "wild_card" and model_string != "music_vae":
             raise ValueError("Can't use cool chords with other models!")
 
         else:
-            midi_file = np.random.choice(dataset[genre])
-            music_dict = render_sequence_to_music_dict(midi_file, music_dict,
-                                                       model_string)
-            create_music(model_string, music_dict)
+            music_dicts = []
+            for i in range(num_generations):
+                midi_file = np.random.choice(dataset[genre])
+                music_dict = render_sequence_to_music_dict(midi_file,
+                                                           music_dict,
+                                                           model_string)
+                music_dicts.append(music_dict)
+                music_dict = copy.deepcopy(music_dict)
+            create_music(model_string, music_dicts, num_generations)
 
     except Exception as e:
         # if for some reason something fails, give the people what they want.
