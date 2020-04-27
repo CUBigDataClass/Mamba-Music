@@ -8,7 +8,13 @@ if __name__ == '__main__':
         'temperature': 1.0,
         'length': 1.0,
         'artist': 'music_transformer',
-        'genre': 'random',
-        'take': 1
+        'genre': 'wild_card',
+        'num_generations': 2
     }
     generate_mm_music(music_dict)
+"""
+['melody_rnn', 'performance_rnn', 'polyphony_rnn',
+               'pianoroll_rnn_nade', 'improv_rnn', 'music_vae',
+               'music_transformer']
+
+"""

@@ -9,6 +9,7 @@ from magenta.music.protobuf import generator_pb2, music_pb2
 from magenta.models.shared import sequence_generator_bundle
 import magenta.music as mm
 import utils
+import uuid
 
 
 class MambaMagentaModel():
@@ -150,8 +151,8 @@ class MambaMagentaModel():
             end_time=total_seconds)
 
         self.output_sequence = self.model.generate(input_sequence, generator_options)
-
-        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{self.counter}", use_salamander=True)
+        unique_id = str(uuid.uuid1())
+        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{unique_id}", use_salamander=True)
 
     def change_info(self, info, is_empty_model=False):
         """
