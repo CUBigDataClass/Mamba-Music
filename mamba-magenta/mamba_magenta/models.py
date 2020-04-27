@@ -187,7 +187,7 @@ class ImprovRNN(MambaMagentaModel):
         renderer = mm.BasicChordRenderer(velocity=CHORD_VELOCITY)
         renderer.render(sequence)
         unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(sequence, f"{self.model_name}{unique_id}")
+        generated_sequence_2_mp3(sequence, f"{self.model_name}{unique_id}")
 
 
 class MusicVAE(MambaMagentaModel):
@@ -317,7 +317,7 @@ class MusicVAE(MambaMagentaModel):
         self.fix_instruments_for_concatenation(seqs)
         prog_ns = concatenate_sequences(seqs)
         unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(prog_ns, f"{self.model_name}{unique_id}")
+        generated_sequence_2_mp3(prog_ns, f"{self.model_name}{unique_id}")
 
 
     def trim_sequence(self, seq, num_seconds=12.0):
@@ -505,7 +505,7 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
         unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{unique_id}", use_salamander=True)
 
     def generate_primer(self):
         """
@@ -555,7 +555,7 @@ class MusicTransformer(MambaMagentaModel):
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
         unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{unique_id}", use_salamander=True)
 
     def generate_basic_notes(self, qpm=160, failsafe=False):
         """
@@ -599,4 +599,4 @@ class MusicTransformer(MambaMagentaModel):
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
         unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{unique_id}", use_salamander=True)
