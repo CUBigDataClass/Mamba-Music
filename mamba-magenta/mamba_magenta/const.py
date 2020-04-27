@@ -12,3 +12,4 @@ COOL_CHORDS = [['C', 'G', 'Am', 'Em', 'F', 'C', 'F', 'G'], ['Db', 'Ab', 'Bbm', '
 MODELS_LIST = ['melody_rnn', 'performance_rnn', 'polyphony_rnn',
                'pianoroll_rnn_nade', 'improv_rnn', 'music_vae',
                'music_transformer']
+SUBSEQUENCE_TIME = 10.0

@@ -44,7 +44,7 @@ def generate_from_best_models(model_string):
         num_chords = len(C.COOL_CHORDS)
         idx = np.random.choice(num_chords)
         chord_selection = C.COOL_CHORDS[idx]
-        generate_cool_chords(model_string, chord_selection)
+        generate_cool_chords(chord_selection)
 
 
 def render_sequence_to_music_dict(midi_file, music_dict,
@@ -57,17 +57,17 @@ def render_sequence_to_music_dict(midi_file, music_dict,
     basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
                     "pianoroll_rnn_nade"]
     if model_string in basic_models:
-        subsequence = mm.extract_subsequence(sequence, 0.0, 14.0)
+        subsequence = mm.extract_subsequence(sequence, 0.0, C.SUBSEQUENCE_TIME)
         for note in subsequence.notes:
             # rnns can work with piano data.
             note.program = 0
             note.instrument = 1
         music_dict['sequence'] = subsequence
         if model_string == "performance_rnn":
-            music_dict['num_steps'] = 2560
+            music_dict['num_steps'] = music_dict['num_steps'] * 4
 
     elif model_string == "improv_rnn" or model_string == "music_vae":
-        subsequence = mm.extract_subsequence(sequence, 0.0, 30.0)
+        subsequence = mm.extract_subsequence(sequence, 0.0, C.SUBSEQUENCE_TIME)
         melody = mm.infer_melody_for_sequence(subsequence)
 
         new_sequence = music_pb2.NoteSequence()
@@ -103,92 +103,106 @@ def render_sequence_to_music_dict(midi_file, music_dict,
     return music_dict
 
 
-def create_music(model_string, info):
+def model_generate_n_times(model, num_generations, infos):
+    model.generate()
+    for i in range(1, num_generations):
+        model.change_info(infos[i])
+        model.generate()
+
+
+def create_music(model_string, infos, num_generations):
     """
     creates the music. The real deal.
     """
+    assert infos == num_generations, "Size of infos should be the same as " \
+                                     "the number of generations!"
     basic_models = ["melody_rnn", "performance_rnn", "polyphony_rnn",
                     "pianoroll_rnn_nade"]
     if model_string in basic_models:
         if model_string == "melody_rnn":
-            model = MelodyRNN(info=info)
+            model = MelodyRNN(info=infos[0])
         elif model_string == "performance_rnn":
-            model = PerformanceRNN(info=info)
+            model = PerformanceRNN(info=infos[0])
         elif model_string == "polyphony_rnn":
-            model = PolyphonyRNN(info=info)
+            model = PolyphonyRNN(info=infos[0])
         else:
             # rnn nade model
-            model = PianoRollRNNNade(info=info)
+            model = PianoRollRNNNade(info=infos[0])
         try:
-            model.generate()
+            model_generate_n_times(model, num_generations, infos)
+
         except Exception as e:
             print(e)
-            model.generate(empty=True)
+            for i in range(1, num_generations):
+                model.generate(empty=True)
 
     elif model_string == "improv_rnn" or model_string == "music_vae":
         if model_string == "improv_rnn":
-            model = ImprovRNN(info=music_dict)
+            model = ImprovRNN(info=infos[0])
         else:
-            model = MusicVAE(info=music_dict, is_conditioned=False)
+            model = MusicVAE(info=infos[0], is_conditioned=False)
+
         try:
-            model.generate()
+            model_generate_n_times(model, num_generations, infos)
         except Exception as e:
             print(e)
-            model.generate(backup_seq=music_dict["backup_sequence"])
+            for i in range(1, num_generations):
+                model.generate(backup_seq=infos[i]["backup_sequence"])
 
     else:
         # defaults to music transformer variants
         idx = np.random.randint(0, 2)
         if idx == 0:
-            model = MusicTransformer(info=music_dict, is_conditioned=True)
+            model = MusicTransformer(info=infos[0], is_conditioned=True)
             model.generate_basic_notes()
+            for i in range(1, num_generations):
+                model.change_info(infos[i])
+                model.generate_basic_notes()
         else:
 
             try:
-                model = MusicTransformer(info=music_dict)
+                model = MusicTransformer(info=infos[0])
                 model.generate_primer()
+                for i in range(1, num_generations):
+                    model.change_info(infos[i])
+                    model.generate_primer()
 
             except Exception as e:
                 print("ERROR", e)
                 print("Resorting to unconditioned model here...")
                 model = MusicTransformer(is_empty_model=True)
-                model.generate()
+                for i in range(1, num_generations):
+                    model.generate()
 
 
-def generate_cool_chords(model_string, chord_arr):
+def generate_cool_chords(chord_arr):
     # music vae!
     model = MusicVAE(is_empty_model=True)
     model.generate(chord_arr=chord_arr)
 
 
-if __name__ == '__main__':
-
+def generate_mm_music(music_dict):
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres
-
-    music_dict = {
-        'temperature': 1.0,
-        'length': 1,
-        'artist': 'music_transformer',
-        'genre': 'random'
-    }
 
     if music_dict['genre'] == 'random':
         genre = np.random.choice(genres)
     else:
-        if music_dict['genre'] not in genres:
+        if music_dict['genre'] not in (genres + ["wild_card"]):
             genre = np.random.choice(genres)
         else:
-            pass
+            genre = music_dict['genre']
 
-    # genre = "wild_card"
     model_string = music_dict['artist']
-    special_models = ["music_transformer", "music_vae"]
+    if model_string not in C.MODELS_LIST:
+        print("Invalid artist. Setting model string to music transformer")
 
+    special_models = ["music_transformer", "music_vae"]
     try:
         if genre == "wild_card" and model_string in special_models:
             # we can generate cool chords only on these conditions.
             generate_from_best_models(model_string)
+
         elif genre == "cool_chords" and model_string != "music_vae":
             raise ValueError("Can't use cool chords with other models!")
 
@@ -197,6 +211,7 @@ if __name__ == '__main__':
             music_dict = render_sequence_to_music_dict(midi_file, music_dict,
                                                        model_string)
             create_music(model_string, music_dict)
+
     except Exception as e:
         # if for some reason something fails, give the people what they want.
         # give them the Music Transformer!

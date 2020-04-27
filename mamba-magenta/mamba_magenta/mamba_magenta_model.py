@@ -153,6 +153,19 @@ class MambaMagentaModel():
 
         utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{self.counter}", use_salamander=True)
 
+    def change_info(self, info, is_empty_model=False):
+        """
+        changes info dictionary with primer sequence
+        """
+        if is_empty_model:
+            # don't do anything here
+            pass
+        else:
+            # info will be a dict with the essential information
+            self.temperature = info['temperature']
+            self.sequence = info['sequence']
+            self.num_steps = info['num_steps']
+
     def parse_yaml(self, config_dir, config_filename):
         """
         parses yaml file.
