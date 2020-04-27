@@ -164,14 +164,15 @@ def lambda_handler(event, context):
         'PUT': lambda x: put(x),
     }
 
-    operation = event['requestContext']['http']['method']
+
+    operation = event['httpMethod']
+
     if operation in operations:
-        payload = json.loads(event['body'])
-        if operation != 'PUT':
-            payload = payload['queryStringParameters']
+        payload = event['queryStringParameters'] if operation != 'PUT' else json.loads(event['body'])
         if not 'SongId' in payload:
             return respond('No SongId specified')
         else:
             return operations[operation](payload)
     else:
         return respond('Unsupported method "{}"'.format(operation))
+
