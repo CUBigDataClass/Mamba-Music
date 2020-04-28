@@ -7,6 +7,7 @@ import pretty_midi
 from midi2audio import FluidSynth
 import os
 
+from upload import upload_blob
 
 # from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
 def print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
@@ -60,10 +61,15 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs", use_salamander=False):
     else:
         fs = FluidSynth()
 
+    # if we want to change anything, we can do it here
 
     fs.midi_to_audio(f'{song_path}.mid', f'{song_path}.mp3')
     # remove midi file for bookkeeping.
     os.remove(f'{song_path}.mid')
+
+    # upload code to google cloud storage
+    upload_blob(f'{filename}.mp3')
+
 
 def create_chords(chord_list):
     nums = []
@@ -76,7 +82,7 @@ def create_chords(chord_list):
 
         for i in range(1, 12):
             all_keys[i] = (all_keys[i-1] + 1) % 12
-    all_transposes = []
+    all_transposes = [] 
     for i in range(all_keys.shape[0]):
         progression = []
         for j in range(all_keys.shape[1]):

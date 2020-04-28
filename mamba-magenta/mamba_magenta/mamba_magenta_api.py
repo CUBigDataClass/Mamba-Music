@@ -9,7 +9,7 @@ if __name__ == '__main__':
         'length': 1.0,
         'artist': 'music_transformer',
         'genre': 'wild_card',
-        'num_generations': 2
+        'num_generations': 1
     }
     generate_mm_music(music_dict)
 """
