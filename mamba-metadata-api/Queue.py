@@ -4,7 +4,7 @@ from boto3.dynamodb.conditions import Attr
 from random import sample
 from random import randint
 
-
+# this is for queuing the songs
 dynamo = boto3.resource('dynamodb')
 table = dynamo.Table('songs')
 
