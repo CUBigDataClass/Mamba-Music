@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  A simple backend (read/write to DynamoDB) with a RESTful API endpoint using
+  Amazon API Gateway.
+Resources:
+  Songs:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.7
+      CodeUri: s3://trash1/Songs-e511966b-4990-4d86-9954-4594c311ad54.zip
+      Description: >-
+        A simple backend (read/write to DynamoDB) with a RESTful API endpoint
+        using Amazon API Gateway.
+      MemorySize: 512
+      Timeout: 10
+      Role: 'arn:aws:iam::747403523429:role/service-role/Songs-role-268mplec'
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /Songs
+            Method: ANY
+      Tags:
+        'lambda-console:blueprint': microservice-http-endpoint-python
+      FunctionName: Songs

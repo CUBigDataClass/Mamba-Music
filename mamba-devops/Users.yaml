@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  A simple backend (read/write to DynamoDB) with a RESTful API endpoint using
+  Amazon API Gateway.
+Resources:
+  Users:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.7
+      CodeUri: s3://trash1/Users-6b3aacf1-5216-4cc8-ac32-4c55cfa46fcd.zip
+      Description: >-
+        A simple backend (read/write to DynamoDB) with a RESTful API endpoint
+        using Amazon API Gateway.
+      MemorySize: 512
+      Timeout: 10
+      Role: 'arn:aws:iam::747403523429:role/service-role/Users-role-5bw9yjr7'
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /Users
+            Method: ANY
+      Tags:
+        'lambda-console:blueprint': microservice-http-endpoint-python
+      FunctionName: Users
