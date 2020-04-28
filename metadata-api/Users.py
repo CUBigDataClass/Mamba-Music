@@ -8,11 +8,23 @@ table = dynamo.Table('users')
 
 def delete(payload):
     response = table.delete_item(Key = {'CustomerId': payload['CustomerId']})
+    if 'Item' in response:
+        if 'likes' in response['Item'] and response['Item']['likes'] != None:
+            response['Item']['likes'] = list(response['Item']['likes'])
+        if 'dislikes' in response['Item'] and response['Item']['dislikes'] != None:
+            response['Item']['dislikes'] = list(response['Item']['dislikes'])
+
     return respond(None, response)
 
 
 def get(payload):
     response = table.get_item(Key = {'CustomerId': payload['CustomerId']})
+    if 'Item' in response:
+        if 'likes' in response['Item'] and response['Item']['likes'] != None:
+            response['Item']['likes'] = list(response['Item']['likes'])
+        if 'dislikes' in response['Item'] and response['Item']['dislikes'] != None:
+            response['Item']['dislikes'] = list(response['Item']['dislikes'])
+
     return respond(None, response)
 
 
@@ -27,19 +39,9 @@ def put(payload):
                 'first_name': payload['first_name'],
                 'last_name': payload['last_name']
             }
-            if 'likes' in payload:
-                item['likes'] = set(payload['likes'])
-            if 'dislikes' in payload:
-                item['dislikes'] = set(payload['likes'])
 
             table.put_item(Item = item)
             
-            # set is not json serializable :) :) :) :) :) :) :)):):):
-            if 'likes' in item: 
-                item['likes'] = list(item['likes'])
-            if 'dislikes' in item:
-                item['dislikes'] = list(item['likes'])
-
             return respond(None, item)
 
     else: # update existing object
@@ -54,42 +56,73 @@ def put(payload):
             attributes[':lname'] = payload['last_name']
             update_str += 'last_name = :lname, '
 
-        if 'action' in payload: # is like/dislike an addition or a deletion?
-            if payload['action'] == 'add': # if addition, union to existing set
-                if 'likes' in payload:
-                    if 'likes' in item:
-                        attributes[':l'] = set(item['likes']) | set(payload['likes'])
-                    else:
-                        attributes[':l'] = set(payload['likes'])
-                    update_str += 'likes = :l, '
+        # If you are reading this, welcome to hell
+        # Markers for updating the likes and dislikes lists.
+        # 'a' is what the request called, 'b' is the other field.
+        # This is to prevent a song from being simultaneously liked and disliked.
+        a = None
+        b = None
+        songTable = None
+        songUpdate = None
+        songAttr = None
+        if 'likes' in payload:
+            a = 'likes'
+            b = 'dislikes'
+        elif 'dislikes' in payload:
+            a = 'dislikes'
+            b = 'likes'
 
-                if 'dislikes' in payload:
-                    if 'dislikes' in item:
-                        attributes[':dl'] = set(item['dislikes']) | set(payload['dislikes'])
-                    else:
-                        attributes[':dl'] = set(payload['dislikes'])
-                    update_str += 'dislikes = :dl, '
+        if a != None and b != None:
+            update_str += a + ' = :' + a[0] + ', '
 
-            elif payload['action'] == 'del': # if deletion, remove from existing set
-                if 'likes' in payload:
-                    if 'likes' in item:
-                        for l in payload['likes']:
-                            if l in item['likes']:
-                                item['likes'].remove(l)
-                        attributes[':l'] = item['likes']
-                        if attributes[':l'] == set(): # can't store empty set, so use list
-                            attributes[':l'] = []
-                        update_str += 'likes = :l, '
+            if not a in item or item[a] == None: # If list doesn't exist, create it and add
+                attributes[':' + a[0]] = set([payload[a]])
+            else: # Otherwise, add/remove from existing set
+                if payload[a] in item[a]: # Remove
+                    attributes[':' + a[0]] = item[a].remove(payload[a])
+                else: # Add
+                    attributes[':' + a[0]] = item[a].add(payload[a])
 
-                if 'dislikes' in payload:
-                    if 'dislikes' in item:
-                        for l in payload['dislikes']:
-                            if l in item['dislikes']:
-                                item['dislikes'].remove(l)
-                        attributes[':dl'] = item['dislikes']
-                        if attributes[':dl'] == set(): # can't store empty set, so use list
-                            attributes[':dl'] = []
-                        update_str += 'dislikes = :dl, '
+            # Song can't be simultaneously liked and disliked
+            if b in item and payload[a] in item[b]:
+                attributes[':' + b[0]] = item[b].remove(payload[a])
+                update_str += b + ' = :' + b[0] + ', '
+
+            # If we update user like list, reflect the same change in song db
+            # Do the same stuff for the songs
+            songTable = dynamo.Table('songs')
+            songUpdate = 'SET ' + a + ' = :' + a[0] + ', ' + a + '_ct = :ct1, ' 
+            songAttr = {}
+
+            songItem = songTable.get_item(Key = {'SongId': payload[a]})
+            if not 'Item' in songItem:
+                return respond('SongIdNotValid')
+            songItem = songItem['Item']
+
+            if not a in songItem or songItem[a] == None:
+                songAttr[':' + a[0]] = set([payload['CustomerId']])
+                songAttr[':ct1'] = 1
+            else:
+                if payload['CustomerId'] in songItem[a]:
+                    songAttr[':' + a[0]] = songItem[a].remove(payload['CustomerId'])
+                    songAttr[':ct1'] = songItem[a + '_ct'] - 1
+                else:
+                    songAttr[':' + a[0]] = songItem[a].add(payload['CustomerId'])
+                    songAttr[':ct1'] = songItem[a + '_ct'] + 1
+
+            if b in songItem and payload['CustomerId'] in songItem[b]:
+                songAttr[':' + b[0]] = songItem[b].remove(payload['CustomerId'])
+                songUpdate += b + ' = :' + b[0] + ', ' + b + '_ct = :ct2, '
+                songAttr[':ct2'] = songItem[b + '_ct'] - 1
+
+            songUpdate = songUpdate[:len(songUpdate)-2]
+
+            songTable.update_item(
+                Key = {'SongId': payload[a]},
+                UpdateExpression = songUpdate,
+                ExpressionAttributeValues = songAttr
+            )  
+
 
         update_str = update_str[:len(update_str)-2] # remove trailing comma
         if len(update_str) <= 4:
@@ -103,9 +136,15 @@ def put(payload):
 
         # set is not json serializable :) :) :) :) :) :) :)):):):
         if ':l' in attributes: 
-            attributes[':l'] = list(attributes[':l'])
-        if ':dl' in attributes:
-            attributes[':dl'] = list(attributes[':dl'])
+            if attributes[':l']: # Empty set can't convert to list
+                attributes[':l'] = list(attributes[':l'])
+            else:
+                attributes[':l'] = []
+        if ':d' in attributes:
+            if attributes[':d']:
+                attributes[':d'] = list(attributes[':d'])
+            else:
+                attributes[':l'] = []
 
         return respond(None, attributes)
 
@@ -116,6 +155,7 @@ def respond(err, res=None):
         'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
         },
     }
 
@@ -126,12 +166,12 @@ def lambda_handler(event, context):
         'GET': lambda x: get(x),
         'PUT': lambda x: put(x),
     }
+    
 
-    operation = event['requestContext']['http']['method']
+    operation = event['httpMethod']
+
     if operation in operations:
-        payload = json.loads(event['body'])
-        if operation != 'PUT':
-            payload = payload['queryStringParameters']
+        payload = event['queryStringParameters'] if operation != 'PUT' else json.loads(event['body'])
         if not 'CustomerId' in payload:
             return respond('No CustomerId specified')
         else:
