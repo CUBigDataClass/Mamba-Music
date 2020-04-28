@@ -1,0 +1,26 @@
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.19.2",
+    "bootstrap": "^4.4.1",
+    "mdbreact": "^4.25.6",
+    "react": "^16.13.1",
+    "react-audio-player": "^0.13.0",
+    "react-bootstrap": "^1.0.1",
+    "react-dom": "^16.13.1",
+    "react-google-login": "^5.1.10",
+    "react-scripts": "0.9.5",
+    "react-sticky-footer": "0.1.0-rc3",
+    "reactstrap": "^8.4.1",
+    "typescript": ""
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}

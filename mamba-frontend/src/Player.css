@@ -1,0 +1,24 @@
+.footer {
+    flex-shrink: 0;
+    text-align: center;
+    background-color: "#1fc8db";
+    background-image: linear-gradient(95deg,  #9fb8ad 0%, #1fc8db 51%, #2cb5e8);
+    box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
+    color: white;
+    height: 4rem;
+
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    left: 0;
+
+  }
+
+  .player {
+      margin: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+  }

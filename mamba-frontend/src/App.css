@@ -1,0 +1,33 @@
+.imageClass {
+    /* position: absolute; */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    margin: auto;
+    width: calc(100vh - 496px);
+    height: calc(100vh - 500px);
+}
+
+.musicTitle {
+    text-align: center;
+    color: white;
+}
+
+.gaming {
+    color: white;
+    text-align: center;
+    font-size: x-large;
+}
+
+.imgDiv {
+    text-align: center;
+}
+
+.radioDiv {
+    text-align: right;   
+}
+
+.appContainer {
+    position: relative;
+}
