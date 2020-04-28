@@ -319,7 +319,6 @@ class MusicVAE(MambaMagentaModel):
         unique_id = str(uuid.uuid1())
         generated_sequence_2_mp3(prog_ns, f"{self.model_name}{unique_id}")
 
-
     def trim_sequence(self, seq, num_seconds=12.0):
         seq = mm.extract_subsequence(seq, 0.0, num_seconds)
         seq.total_time = num_seconds
