@@ -1,10 +1,10 @@
 import boto3
 import json
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Attr, Key
 from random import sample
 from random import randint
 
-# this is for queuing the songs
+
 dynamo = boto3.resource('dynamodb')
 table = dynamo.Table('songs')
 
@@ -21,22 +21,47 @@ def respond(err, res=None):
 
 
 def get(payload):
+    
     response = table.scan(
         Select = 'SPECIFIC_ATTRIBUTES',
         FilterExpression = Attr('artist').eq(payload['artist']),
         ProjectionExpression = 'SongId, title, artist'
     )
     items = response['Items']
-    try:
-        ids = sample(range(0, len(items)), 5)
-    except ValueError:
-        ids = [randint(0, len(items)-1) for i in range(5)]
+    N = randint(0,3)
     
-    result = list(map(lambda x: items[x], ids))
-    data = {'ids': result}
+    curlist = recomendRand(payload['artist'], N)
+    try:
+        while len(curlist) < 10:
+            x = items[randint(0, len(items) - 1)]
+            flag = False
+            for item in curlist:
+                if x["SongId"] == item["SongId"]:
+                    flag = True
+            if not flag:
+                curlist.append(x)
+    except:
+        pass
+    
+    data = {"ids" : [ {"SongId":x["SongId"], "title":x["title"], "artist":x["artist"]} for x in curlist]}
+    return respond(False,data)
+    
 
-    return respond(None, data)
-
+def recomendRand(artist, N):
+    result = table.query(
+        IndexName="artist-likes_ct-index-copy",
+        KeyConditionExpression = Key('artist').eq(artist),
+        ScanIndexForward = False
+    )
+    retlist = []
+    ctr = 0
+    songsAdded = 0
+    while songsAdded < N and ctr < len(result["Items"]):
+        if randint(0,1) == 1:
+            retlist.append(result["Items"][ctr])
+            songsAdded += 1
+        ctr += 1
+    return retlist        
 
 def lambda_handler(event, context):
     print(event)
