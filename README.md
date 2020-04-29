@@ -1,3 +1,5 @@
+![](https://github.com/CUBigDataClass/Mamba-Music/workflows/Python%20application/badge.svg)
+
 # Mamba Music
 A cloud based machine learning platform for music generation, powered by Tensorflow's state of the art Magenta models.
 
