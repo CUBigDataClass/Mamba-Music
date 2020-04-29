@@ -52,10 +52,10 @@ class MelodyRNN(MambaMagentaModel):
     Generates a one line melody
     with the input sequence as a primer.
     """
-    def __init__(self, args=None, model_string="basic", info=None):
-        super(MelodyRNN, self).__init__(args, info)
+    def __init__(self, genre, args=None, model_string="basic", info=None):
+        super(MelodyRNN, self).__init__(genre, args, info)
         options = ["basic", "mono", "lookback", "attention"]
-
+        self.title = "melody_rnn"
         self.get_standard_model(model_string, f"{model_string}_rnn", options)
         self.initialize("Melody RNN", melody_rnn_sequence_generator)
 
@@ -67,13 +67,14 @@ class PerformanceRNN(MambaMagentaModel):
     Not super music, just playing around.
 
     """
-    def __init__(self, args=None, model_string="performance_with_dynamics", info=None):
-        super(PerformanceRNN, self).__init__(args, info=info)
+    def __init__(self, genre, args=None, model_string="performance_with_dynamics", info=None):
+        super(PerformanceRNN, self).__init__(genre, args, info=info)
         options = ["performance", "performance_with_dynamics",
                    "performance_with_dynamics_and_modulo_encoding",
                    "density_conditioned_performance_with_dynamics",
                    "pitch_conditioned_performance_with_dynamics",
                    "multiconditioned_performance_with_dynamics"]
+        self.title = "performance_rnn"
         self.get_standard_model(model_string, model_string, options)
 
         self.initialize("Performance RNN", performance_sequence_generator)
@@ -88,9 +89,10 @@ class PolyphonyRNN(MambaMagentaModel):
     Music slightly akin to Bach
 
     """
-    def __init__(self, args=None, model_string="polyphony", info=None):
-        super(PolyphonyRNN, self).__init__(args, info=info)
+    def __init__(self, genre, args=None, model_string="polyphony", info=None):
+        super(PolyphonyRNN, self).__init__(genre, args, info=info)
         options = ["polyphony"]
+        self.title = "polyphony_rnn"
         self.get_standard_model(model_string, "polyphony_rnn", options)
         self.model_name = "polyphony_rnn"
         self.initialize("Polyphony RNN", polyphony_sequence_generator, "polyphony")
@@ -100,8 +102,9 @@ class PianoRollRNNNade(MambaMagentaModel):
     """
     A bit of a more intriguing model.
     """
-    def __init__(self, args=None, model_string="pianoroll_rnn_nade", info=None):
-        super(PianoRollRNNNade, self).__init__(args, info=info)
+    def __init__(self, genre, args=None, model_string="pianoroll_rnn_nade", info=None):
+        super(PianoRollRNNNade, self).__init__(genre, args, info=info)
+        self.title = "pianoroll_rnn_nade"
         options = ["pianoroll_rnn_nade", "pianoroll_rnn_nade-bach"]
         self.get_standard_model(model_string, model_string, options)
         self.initialize("Pianroll RNN Nade", pianoroll_rnn_nade_sequence_generator, "rnn-nade_attn")
@@ -114,13 +117,14 @@ class ImprovRNN(MambaMagentaModel):
     Requires both the chords and number of times to repeat those chords
     (can be 1 though).
     """
-    def __init__(self, args=None, model_string="chord_pitches_improv",
+    def __init__(self, genre, args=None, model_string="chord_pitches_improv",
                  phrase_num=4, info=None, is_empty_model=False):
 
-        super(ImprovRNN, self).__init__(args, info=info,
+        super(ImprovRNN, self).__init__(genre, args, info=info,
                                         is_empty_model=is_empty_model)
         options = ["chord_pitches_improv"]
         self.phrase_num = 4
+        self.title = "improv_rnn"
         self.get_standard_model(model_string, model_string, options)
 
         self.initialize("Improv RNN", improv_rnn_sequence_generator)
@@ -186,8 +190,9 @@ class ImprovRNN(MambaMagentaModel):
         sequence = self.model.generate(self.sequence, generator_options)
         renderer = mm.BasicChordRenderer(velocity=CHORD_VELOCITY)
         renderer.render(sequence)
-        unique_id = str(uuid.uuid1())
-        generated_sequence_2_mp3(sequence, f"{self.model_name}{unique_id}")
+        request_dict = self.put_request_dict
+        generated_sequence_2_mp3(sequence, f"{self.unique_id}",
+                                 request_dict=request_dict)
 
 
 class MusicVAE(MambaMagentaModel):
@@ -198,9 +203,10 @@ class MusicVAE(MambaMagentaModel):
     Now this is a unique model. And definitely the fan favorite.
 
     """
-    def __init__(self, args=None, is_conditioned=True, info=None,
+    def __init__(self, genre, args=None, is_conditioned=True, info=None,
                  is_empty_model=False):
-        super(MusicVAE, self).__init__(args, info, is_empty_model=is_empty_model)
+        super(MusicVAE, self).__init__(genre, args, info, is_empty_model=is_empty_model)
+        self.title = "music_vae"
         self.get_model()
         self.is_conditioned = is_conditioned
         self.initialize()
@@ -316,8 +322,9 @@ class MusicVAE(MambaMagentaModel):
 
         self.fix_instruments_for_concatenation(seqs)
         prog_ns = concatenate_sequences(seqs)
-        unique_id = str(uuid.uuid1())
-        generated_sequence_2_mp3(prog_ns, f"{self.model_name}{unique_id}")
+        request_dict = self.put_request_dict
+        generated_sequence_2_mp3(prog_ns, f"{self.unique_id}",
+                                 request_dict=request_dict)
 
     def trim_sequence(self, seq, num_seconds=12.0):
         seq = mm.extract_subsequence(seq, 0.0, num_seconds)
@@ -343,10 +350,11 @@ class MusicTransformer(MambaMagentaModel):
     Can be "primed" with a melody, and
     helps provide accompaniment.
     """
-    def __init__(self, args=None, is_conditioned=False, info=None,
+    def __init__(self, genre, args=None, is_conditioned=False, info=None,
                  is_empty_model=False):
-        super(MusicTransformer, self).__init__(args, info,
+        super(MusicTransformer, self).__init__(genre, args, info,
                                                is_empty_model=is_empty_model)
+        self.title = "music_transformer"
         self.get_model()
 
         self.initialize(is_conditioned)
@@ -503,8 +511,9 @@ class MusicTransformer(MambaMagentaModel):
             sample_ids,
             encoder=self.encoders['targets'])
         unconditional_ns = mm.midi_file_to_note_sequence(midi_filename)
-        unique_id = str(uuid.uuid1())
-        generated_sequence_2_mp3(unconditional_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        request_dict = self.put_request_dict
+        generated_sequence_2_mp3(unconditional_ns, f"{self.unique_id}", use_salamander=True,
+                                 request_dict=request_dict)
 
     def generate_primer(self):
         """
@@ -553,8 +562,9 @@ class MusicTransformer(MambaMagentaModel):
         # Append continuation to primer.
         continuation_ns = mm.concatenate_sequences([primer_ns, ns])
 
-        unique_id = str(uuid.uuid1())
-        generated_sequence_2_mp3(continuation_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        request_dict = self.put_request_dict
+        generated_sequence_2_mp3(continuation_ns, f"{self.unique_id}", use_salamander=True,
+                                 request_dict=request_dict)
 
     def generate_basic_notes(self, qpm=160, failsafe=False):
         """
@@ -597,5 +607,6 @@ class MusicTransformer(MambaMagentaModel):
             encoder=self.encoders['targets'])
         accompaniment_ns = mm.midi_file_to_note_sequence(midi_filename)
 
-        unique_id = str(uuid.uuid1())
-        generated_sequence_2_mp3(accompaniment_ns, f"{self.model_name}{unique_id}", use_salamander=True)
+        request_dict = self.put_request_dict
+        generated_sequence_2_mp3(accompaniment_ns, f"{self.unique_id}", use_salamander=True,
+                                 request_dict=request_dict)

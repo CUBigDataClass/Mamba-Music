@@ -16,7 +16,7 @@ class MambaMagentaModel():
     """
     Base class for all Mamba Models.
     """
-    def __init__(self, args, info=None, is_empty_model=False):
+    def __init__(self, genre, args, info=None, is_empty_model=False):
         """
         """
         # loads from argparseconfig
@@ -24,6 +24,7 @@ class MambaMagentaModel():
         if the user wants to load from a yaml file,
         it takes priority over loading via argparse args.
         """
+        self.genre = genre
         if is_empty_model:
             pass
         elif info is not None:
@@ -151,8 +152,22 @@ class MambaMagentaModel():
             end_time=total_seconds)
 
         self.output_sequence = self.model.generate(input_sequence, generator_options)
-        unique_id = str(uuid.uuid1())
-        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.model_name}{unique_id}", use_salamander=True)
+
+        request_dict = self.put_request_dict
+        utils.generated_sequence_2_mp3(self.output_sequence, f"{self.unique_id}", use_salamander=True,
+                                      request_dict=request_dict)
+
+    @property
+    def put_request_dict(self):
+        self.unique_id = str(uuid.uuid1())
+
+        # generate title
+        request_dict = {
+            "SongId": self.unique_id,
+            "artist": self.title,
+            "genre": self.genre
+        }
+        return request_dict
 
     def change_info(self, info, is_empty_model=False):
         """
