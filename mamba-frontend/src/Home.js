@@ -54,7 +54,9 @@ class Home extends React.Component {
         <div>
             <NavigationBar userInfoOne={this.handleUserLoggedInInfo} userInfoTwo={this.handleUserDetails} />
             {isUserLoggedIn && (
-               <App deets={userDetails} musicDeets={musicInfo} currentMusic={currentMusicIndex} chooseRadio={this.handleChangeRadioIndex}/>
+              <div>
+                <App deets={userDetails} musicDeets={musicInfo} currentMusic={currentMusicIndex} chooseRadio={this.handleChangeRadioIndex}/>
+              </div>
             )}
 
             {!isUserLoggedIn && (
