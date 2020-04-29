@@ -15,6 +15,11 @@ if __name__ == '__main__':
         'genre': args.genre,
         'num_generations': args.numgenerations
     }
+    if music_dict['genre'] == 'random':
+        keys = list(C.GENRE_BUCKETS.keys())
+        genre_selection = np.random.choice(keys)
+        music_dict['genre'] = genre_selection
+
     if music_dict['genre'] != 'wild_card':
         if music_dict['genre'] not in list(C.GENRE_BUCKETS.keys()):
             raise KeyError("Genre not found in keys!")
