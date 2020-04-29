@@ -30,7 +30,7 @@ cd mamba-api
 ### ML Models
 
 ```sh
-cd mamba-magenta
+cd mamba-magenta/mamba-magenta
 pip3 -r install requirements.txt
 
 # usage
@@ -38,3 +38,14 @@ pip3 -r install requirements.txt
 python3 mamba_magenta_api.py -a <artists> -g <genre> -t <temperature> -l <length> -n <numgenerations>
 
 ```
+
+### NEW: Neural Transfer
+
+
+```sh
+cd mamba-magenta/mamba-magenta/neural_style
+./generate_art.sh
+
+```
+This command will generate pictures and put them in `mamba-magenta/mamba-magenta/neural_style/generated`.
+Make sure to have pictures in `mamba-magenta/mamba-magenta/neural_style/generated` and `mamba-magenta/mamba-magenta/neural_style/content`.
