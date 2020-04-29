@@ -29,7 +29,7 @@ cd mamba-api
 
 ### ML Models
 
-```
+```sh
 cd mamba-magenta
 pip3 -r install requirements.txt
 
