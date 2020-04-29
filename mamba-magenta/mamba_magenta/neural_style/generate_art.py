@@ -124,15 +124,12 @@ class MambaArtGeneration():
             print(content)
             print("At idx", idx)
             img = self.generate(content, random_style)
-            img = img.resize((500,500))
-            plt.imshow(img)
-            plt.show(img)
-            # art_id = str(uuid.uuid1())
-            # song_id = item['SongId']
-            # self.send_put_request(song_id, art_id)
+            art_id = str(uuid.uuid1())
+            song_id = item['SongId']
+            self.send_put_request(song_id, art_id)
 
-            # img.save(f"generated/{art_id}.png", "PNG")
-            # self.upload_blob(f"{art_id}.png")
+            img.save(f"generated/{art_id}.png", "PNG")
+            self.upload_blob(f"{art_id}.png")
 
     def upload_blob(self, source_file_name, bucket_name="mamba_songs_bucket",
                     songs_dir="generated"):
