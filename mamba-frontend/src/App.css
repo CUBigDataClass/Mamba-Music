@@ -20,6 +20,21 @@
     font-size: x-large;
 }
 
+.downloadBtn {
+    text-align: center;
+    margin: auto;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 30px;
+    width: 30px;
+    margin-bottom: 10vh;
+}
+
+.downloadBtn:hover {
+    cursor: pointer;
+}
+
 .imgDiv {
     text-align: center;
 }
@@ -31,3 +46,17 @@
 .appContainer {
     position: relative;
 }
+
+.container {
+    height: 200px;
+    position: relative;
+}
+
+.vertical-center {
+    margin: 0;
+    position: absolute;
+    top: 80%;
+    left: 42%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+  }

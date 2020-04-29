@@ -1,6 +1,5 @@
 import React from 'react';
 import "./RadioList.css"
-import { Container } from 'reactstrap';
 
 class RadioList extends React.Component {
     constructor(props) {
@@ -20,7 +19,6 @@ class RadioList extends React.Component {
 
     render() {
         return (
-          <Container>
             <div id="all">
               <h1 className="radTitle">Pick a Radio Station</h1>
               <div className="entireRadList">
@@ -45,7 +43,6 @@ class RadioList extends React.Component {
                 ))}
               </div>
             </div>
-          </Container>
         );
     }
 }

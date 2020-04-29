@@ -3,7 +3,11 @@
     box-shadow: none;
 }
 
-  .footerPadding {
-      padding-top: 2rem;
-  }
+.footerPadding {
+    padding-top: 2rem;
+}
+
+#buttonEx {
+    text-align: center;
+}
 

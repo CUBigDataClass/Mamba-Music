@@ -19,6 +19,22 @@ class App extends React.Component {
     this.props.chooseRadio(resp)
   }
 
+  downLoadSong = () => {
+		fetch('https://storage.googleapis.com/mamba_songs_bucket/00818d62-89e1-11ea-b15b-42010a8a0002.mp3')
+			.then(response => {
+				response.blob().then(blob => {
+          console.log("getting the song")
+					let url = window.URL.createObjectURL(blob);
+          let a = document.createElement('a');
+          // console.log(url);
+          a.href = url;
+					a.download = 'song.mp3';
+					a.click();
+				});
+				//window.location.href = response.url;
+		});
+  }
+
   render() {
     return (
       <div className="appContainer">
@@ -32,6 +48,7 @@ class App extends React.Component {
               </div>
               <br/>
               <p className="gaming">{this.props.musicDeets[this.props.currentMusic].artist} - {this.props.musicDeets[this.props.currentMusic].genre}</p>
+              <img className="downloadBtn" src={require('./Buttons/Images/download.png')} onClick={this.downLoadSong}></img>
             </Col>
             <Col md={{ span: 3 }}>
               <RadioList chooseRadio={this.handleChangeRadioIndex}/>
