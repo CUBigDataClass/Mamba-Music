@@ -113,7 +113,7 @@ class NavigationBar extends React.Component {
                                     </DropdownToggle>
                                     <DropdownMenu right>
                                         <DropdownItem>
-                                            Settings
+                                            { userDetails.givenName + ' ' + userDetails.familyName }
                                         </DropdownItem>
                                         <DropdownItem divider />
                                         <GoogleLogout

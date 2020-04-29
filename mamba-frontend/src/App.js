@@ -10,6 +10,15 @@ class App extends React.Component {
     this.state = {
       mane: false,
       changeRadioIndex: null,
+      artistt: {
+        melody_rnn: 'Melody RNN',
+        performance_rnn: 'Performance RNN',
+        polyphony_rnn: 'Polyphony RNN',
+        pianoroll_rnn_nade: 'Pianoroll RNN Nade',
+        improv_rnn: 'Improv RNN',
+        music_vae: 'Music Vae',
+        music_transformer: 'Music Transformer'
+      }
     };
 
     this.handleChangeRadioIndex = this.handleChangeRadioIndex.bind(this);
@@ -20,18 +29,16 @@ class App extends React.Component {
   }
 
   downLoadSong = () => {
-		fetch('https://storage.googleapis.com/mamba_songs_bucket/00818d62-89e1-11ea-b15b-42010a8a0002.mp3')
+    let getMusic = 'https://storage.googleapis.com/mamba_songs_bucket/' + this.props.musicDeets[this.props.currentMusic].SongId + '.mp3'
+		fetch(getMusic)
 			.then(response => {
 				response.blob().then(blob => {
-          console.log("getting the song")
 					let url = window.URL.createObjectURL(blob);
           let a = document.createElement('a');
-          // console.log(url);
           a.href = url;
-					a.download = 'song.mp3';
+					a.download = 'LegendaryMusic.mp3';
 					a.click();
 				});
-				//window.location.href = response.url;
 		});
   }
 
@@ -41,14 +48,18 @@ class App extends React.Component {
         <Container fluid>
           <Row>
             <Col md={{ span: 6, offset: 3 }}> 
-              <h1 className="musicTitle">{this.props.musicDeets[this.props.currentMusic].title}</h1>
-              <br/>
               <div className="imgDiv">
-                <img src={this.props.musicDeets[this.props.currentMusic].art_id} alt="Some" className="imageClass"/>
+                {this.props.musicDeets[this.props.currentMusic].ArtId && (
+                  <img src={'https://storage.googleapis.com/mamba_songs_bucket/' + this.props.musicDeets[this.props.currentMusic].ArtId + '.png'} alt="" className="imageClass"/>
+                )} 
+                {!this.props.musicDeets[this.props.currentMusic].ArtId && (
+                  <img src="https://www.stickpng.com/assets/images/580b57fbd9996e24bc43bf94.png" alt="" className="imageClass"/>
+                )}                
               </div>
               <br/>
-              <p className="gaming">{this.props.musicDeets[this.props.currentMusic].artist} - {this.props.musicDeets[this.props.currentMusic].genre}</p>
-              <img className="downloadBtn" src={require('./Buttons/Images/download.png')} onClick={this.downLoadSong}></img>
+              <h1 className="musicTitle">{this.props.musicDeets[this.props.currentMusic].title}</h1>
+              <p className="gaming">{this.state.artistt[this.props.musicDeets[this.props.currentMusic].artist]}</p>
+              <img className="downloadBtn" src={require('./Buttons/Images/download.png')} onClick={this.downLoadSong} alt=""></img>
             </Col>
             <Col md={{ span: 3 }}>
               <RadioList chooseRadio={this.handleChangeRadioIndex}/>

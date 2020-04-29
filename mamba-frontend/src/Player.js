@@ -10,7 +10,6 @@ import "./Player.css";
 
 import { Modal, Button } from 'react-bootstrap';
 import axios from 'axios';
-import SongsJson from "./SongsJson"
 import defaultMusicJson from './defaultMusicJson';
 
 class Player extends React.Component {
@@ -31,7 +30,6 @@ class Player extends React.Component {
     this.updateMusicInfo()
   }
 
-  // TODO: need to call this on every server call to music, and on every server call to music, update these states
   updateMusicInfo() {
     this.props.musicInfo(this.state.musicInfo)
     this.props.currentMusic(this.state.currentIndex)
@@ -39,34 +37,55 @@ class Player extends React.Component {
 
   componentDidUpdate(prevProps) {
     if(prevProps.changeRadio !== this.props.changeRadio) {
-      console.log("NEW Radio Selected: ", this.props.changeRadio)
+      let callArtist
+      switch(this.props.changeRadio) {
+        case 0:
+          callArtist = 'melody_rnn'
+          break;
+        case 1:
+          callArtist = 'performance_rnn';
+          break;
+        case 2:
+          callArtist = 'polyphony_rnn';
+          break;
+        case 3:
+          callArtist = 'pianoroll_rnn_nade';
+          break;
+        case 4:
+          callArtist = 'improv_rnn';
+          break;
+        case 5:
+          callArtist = 'music_vae';
+          break;
+        case 6:
+          callArtist = 'music_transformer';
+          break;
+        default:
+          callArtist = null
+      }
 
-      // TODO: make a call here to update the musicInfo for new SongsJson
-      this.setState({ musicInfo: SongsJson, currentIndex: 0 }, this.updateMusicInfo)
+      const querystring = require('querystring');
+        let userId = this.state.userGoogleId
+        let getLink = 'https://7xetws0aoh.execute-api.us-west-1.amazonaws.com/Prod/Queue?' + querystring.stringify({ CustomerId: userId }) + '&' + querystring.stringify({ artist: callArtist })
+
+        axios.get(getLink)
+        .then((responseGet) => {
+          this.setState({ musicInfo: responseGet.data.ids, currentIndex: 0 }, this.updateMusicInfo)
+      })
+
+      this.checkLikedDisliked()
     }
     if(prevProps.isUserLoggedIn !== this.props.isUserLoggedIn) {
-      // TODO: call the queue api here with the first radio artist to get the music the very first time
-      this.setState({ musicInfo: SongsJson, currentIndex: 0 }, this.updateMusicInfo)
+      const querystring = require('querystring');
+      let userId = this.state.userGoogleId
+      let getLink = 'https://7xetws0aoh.execute-api.us-west-1.amazonaws.com/Prod/Queue?' + querystring.stringify({ CustomerId: userId }) + '&' + querystring.stringify({ artist: 'music_transformer' })
 
-      let getUser = this.props.userInfo.googleId
-      console.log(getUser)
-      if(getUser) {
-        this.setState({ userGoogleId: getUser.toString() })
-        let likeMusic = this.state.musicInfo[this.state.currentIndex].likes 
-        let dislikeMusic = this.state.musicInfo[this.state.currentIndex].dislikes
+      axios.get(getLink)
+      .then((responseGet) => {
+        this.setState({ musicInfo: responseGet.data.ids, currentIndex: 0 }, this.updateMusicInfo)
+      })
 
-        if(likeMusic.includes(getUser)) {
-          this.setState({ userLikeMusic: true })
-        }
-
-        if(dislikeMusic.includes(getUser)) {
-          this.setState({ userDislikeMusic: true })
-        }
-
-        if(likeMusic.includes(getUser) && dislikeMusic.includes(getUser)) {
-          this.setState({ userLikeMusic: false, userDislikeMusic: false })
-        }
-      }
+      this.checkLikedDisliked()
     }
   }
 
@@ -75,7 +94,7 @@ class Player extends React.Component {
       if(this.state.currentIndex > 0){
         this.setState({ currentIndex: this.state.currentIndex - 1}, this.onPrevOrNextClick)
       } else {
-        this.setState({ currentIndex: 0}, this.onPrevOrNextClick)
+        this.setState({ currentIndex: 0})
       }
     } else {
       this.setState({ showModal: true })
@@ -87,9 +106,14 @@ class Player extends React.Component {
       if(this.state.currentIndex < this.state.musicInfo.length - 1){
         this.setState({ currentIndex: this.state.currentIndex + 1}, this.onPrevOrNextClick)
       } else {
-        // TODO: call the backend here to get 5 more music, and set the currentIndex to 0, set musicInfo to new Music
+        const querystring = require('querystring');
+        let userId = this.state.userGoogleId
+        let getLink = 'https://7xetws0aoh.execute-api.us-west-1.amazonaws.com/Prod/Queue?' + querystring.stringify({ CustomerId: userId }) + '&' + querystring.stringify({ artist: 'music_transformer' })
 
-        this.setState({ currentIndex: this.state.currentIndex }, this.onPrevOrNextClick)
+        axios.get(getLink)
+        .then((responseGet) => {
+          this.setState({ musicInfo: responseGet.data.ids, currentIndex: 0 }, this.updateMusicInfo)
+        })
       }
     } else {
       this.setState({ showModal: true })
@@ -102,30 +126,46 @@ class Player extends React.Component {
   }
 
   checkLikedDisliked() {
-    let likeMusic = this.state.musicInfo[this.state.currentIndex].likes 
-    let dislikeMusic = this.state.musicInfo[this.state.currentIndex].dislikes
-    if(likeMusic.includes(this.state.userGoogleId)) {
-      this.setState({ userLikeMusic: true })
-    } else {
-      this.setState({ userLikeMusic: false })
-      if(dislikeMusic.includes(this.state.userGoogleId)) {
-        this.setState({ userDislikeMusic: true })
-      } else {
-        this.setState({ userDislikeMusic: false })
-      }
-    }
+    const querystring = require('querystring');
+    let getUser = this.props.userInfo.googleId
+    let getUserInfoLink = 'https://q2nypxvh02.execute-api.us-west-1.amazonaws.com/Prod/Users?'+ querystring.stringify({ CustomerId: getUser })
+    
+    axios.get(getUserInfoLink)
+    .then((responseGet) => {
+        if(responseGet.data.hasOwnProperty("Item")){
+            let likeMusic = responseGet.data.Item.likes 
+            let dislikeMusic = responseGet.data.Item.dislikes 
+            if(likeMusic) {
+              if(likeMusic.includes(this.state.musicInfo[this.state.currentIndex].SongId)) {
+                this.setState({ userLikeMusic: true, userDislikeMusic: false })
+              }
+            }
+            if(dislikeMusic) {
+              if(dislikeMusic.includes(this.state.musicInfo[this.state.currentIndex].SongId)) {
+                this.setState({ userLikeMusic: false, userDislikeMusic: true })
+              }
+            }
+
+            if(likeMusic && dislikeMusic) {
+              if(!likeMusic.includes(this.state.musicInfo[this.state.currentIndex].SongId) && !dislikeMusic.includes(this.state.musicInfo[this.state.currentIndex].SongId)) {
+                this.setState({ userLikeMusic: false, userDislikeMusic: false })
+              }
+            }
+        } else {
+          this.setState({ userLikeMusic: false, userDislikeMusic: false })
+        }
+    });
   }
 
   onDislikeClick = () => {
     if(this.props.isUserLoggedIn) {
       this.setState({ userLikeMusic: false, userDislikeMusic: true })
-
       axios({
         method: 'put',
         url: 'https://q2nypxvh02.execute-api.us-west-1.amazonaws.com/Prod/Users',
         data: {
-            CustomerId: this.props.userInfo.googleId,
-            dislikes: 'song_id',       
+          CustomerId: this.props.userInfo.googleId,
+          dislikes: this.state.musicInfo[this.state.currentIndex].SongId
         }
       })
     } else {
@@ -136,13 +176,12 @@ class Player extends React.Component {
   onLikeClick = () => {
     if(this.props.isUserLoggedIn) {
       this.setState({ userLikeMusic: true, userDislikeMusic: false })
-
       axios({
         method: 'put',
         url: 'https://q2nypxvh02.execute-api.us-west-1.amazonaws.com/Prod/Users',
         data: {
           CustomerId: this.props.userInfo.googleId,
-          likes: 'song_id',
+          likes: this.state.musicInfo[this.state.currentIndex].SongId
         }
       })
     } else {
@@ -152,7 +191,6 @@ class Player extends React.Component {
 
   togglePlayPause = () => {
     if(this.props.isUserLoggedIn) {
-      console.log("Play")
       this.setState({ playing: !this.state.playing }, this.playPauseAudio)
     } else {
       this.setState({ showModal: true })
@@ -161,9 +199,10 @@ class Player extends React.Component {
 
   playPauseAudio = () => {
     this.props.currentMusic(this.state.currentIndex)
-    let track = this.state.musicInfo[this.state.currentIndex].song_id 
+    let track = "https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" 
     if(this.state.playing) {
       this.player.src = track 
+      console.log(this.player.duration)
       this.player.play() 
     } else {
       this.player.pause()
@@ -171,6 +210,11 @@ class Player extends React.Component {
   }
 
   render() {
+    if(this.state.playing) {
+      var audio = new Audio("https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" )
+      // audio.src = "https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" 
+      console.log(audio.duration)
+    }
     return (
       <footer className="footer">
         <div className="player" >

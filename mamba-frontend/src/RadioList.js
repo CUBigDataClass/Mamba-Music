@@ -6,13 +6,13 @@ class RadioList extends React.Component {
         super(props);
         this.state = {
           musicPairInfo: [
-            ["Artist 1", "https://media.npr.org/assets/img/2013/10/29/gardiner_haussmann-b7274171073b4700144cbee8f7671a2d052c5a7a-s800-c85.jpg"],
-            ["Artist 2", "https://www.biography.com/.image/t_share/MTE1ODA0OTcxNzMyNjY1ODY5/wolfgang-mozart-9417115-2-402.jpg"],
-            ["Artist 3", "https://www.onthisday.com/images/people/pyotr-ilyich-tchaikovsky-medium.jpg"],
-            ["Artist 4", "https://www.biography.com/.image/t_share/MTI2NTgyMzIxOTcyMjU5NDU5/beethoven-600x600jpg.jpg"],
-            ["Artist 5", "https://media.npr.org/assets/img/2013/10/29/gardiner_haussmann-b7274171073b4700144cbee8f7671a2d052c5a7a-s800-c85.jpg"],
-            ["Artist 6", "https://www.biography.com/.image/t_share/MTE1ODA0OTcxNzMyNjY1ODY5/wolfgang-mozart-9417115-2-402.jpg"],
-            ["Artist 7", "https://www.onthisday.com/images/people/pyotr-ilyich-tchaikovsky-medium.jpg"],
+            ["Melody RNN", "https://media.npr.org/assets/img/2013/10/29/gardiner_haussmann-b7274171073b4700144cbee8f7671a2d052c5a7a-s800-c85.jpg"],
+            ["Performance RNN", "https://www.biography.com/.image/t_share/MTE1ODA0OTcxNzMyNjY1ODY5/wolfgang-mozart-9417115-2-402.jpg"],
+            ["Polyphony RNN", "https://www.onthisday.com/images/people/pyotr-ilyich-tchaikovsky-medium.jpg"],
+            ["Pianoroll RNN Nade", "https://www.biography.com/.image/t_share/MTI2NTgyMzIxOTcyMjU5NDU5/beethoven-600x600jpg.jpg"],
+            ["Improv RNN", "https://hughsroomlive.showare.com/uplimage/Elvis.jpg"],
+            ["Music Vae", "https://cdn.britannica.com/18/136518-050-CD0E49C6/The-Beatles-Ringo-Starr-Paul-McCartney-George.jpg"],
+            ["Music Transformer", "https://static.billboard.com/files/media/01-Eminem-press-by-Craig-McDean-2019-billboard-1548-1024x677.jpg"],
           ]
         }
     }
