@@ -23,6 +23,7 @@ def upload_blob(source_file_name, request_dict,
 
     # do put request
     api_link = C.SONGS_ENDPOINT
+    print(request_dict)
     data = json.dumps(request_dict)
     response = requests.put(api_link, data=data)
     if response.status_code == 200:
