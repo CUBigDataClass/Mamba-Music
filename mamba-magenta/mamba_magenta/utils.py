@@ -47,7 +47,8 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def generated_sequence_2_mp3(seq, filename, dirs="songs", use_salamander=False):
+def generated_sequence_2_mp3(seq, filename, request_dict,
+                             dirs="songs", use_salamander=False):
     """
     generates note sequence `seq` to an mp3 file, with the name
     `filename` in directory(ies) `dir`.
@@ -61,6 +62,7 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs", use_salamander=False):
     else:
         fs = FluidSynth()
 
+    # we can change instrumentation here.
     # if we want to change anything, we can do it here
 
     fs.midi_to_audio(f'{song_path}.mid', f'{song_path}.mp3')
@@ -68,7 +70,7 @@ def generated_sequence_2_mp3(seq, filename, dirs="songs", use_salamander=False):
     os.remove(f'{song_path}.mid')
 
     # upload code to google cloud storage
-    upload_blob(f'{filename}.mp3')
+    upload_blob(f'{filename}.mp3', request_dict)
 
 
 def create_chords(chord_list):
