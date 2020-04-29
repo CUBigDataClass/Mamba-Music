@@ -1,5 +1,11 @@
 .divPadding {
-    padding-left: 20px;
-    padding-right: 20px;
+    margin-left: 20px;
+    margin-right: 20px;
     width: 4.5rem;
+    height: 30px;
+    width: 30px;
+}
+
+.divPadding:hover {
+    cursor: pointer;
 }
