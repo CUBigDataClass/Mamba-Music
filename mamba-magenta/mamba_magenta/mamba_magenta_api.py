@@ -22,7 +22,7 @@ if __name__ == '__main__':
         bucket = C.GENRE_BUCKETS[music_dict['genre']]
         genre = np.random.choice(bucket)
         music_dict['genre'] = genre
-
+    print(music_dict)
     generate_mm_music(music_dict)
 
 """
