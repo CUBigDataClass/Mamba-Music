@@ -189,7 +189,7 @@ def generate_cool_chords(chord_arr, genre):
     model.generate(chord_arr=chord_arr)
 
 
-def generate_mm_music(music_dict):
+def generate_mm_music(music_dict, main_genre):
     dataset = LakhDataset(already_scraped=True)
     genres = dataset.genres
 
@@ -207,7 +207,8 @@ def generate_mm_music(music_dict):
     try:
         if genre == "wild_card" and model_string in special_models:
             # we can generate cool chords only on these conditions.
-            generate_from_best_models(model_string, num_generations, genre)
+            generate_from_best_models(model_string, num_generations,
+                                      main_genre)
 
         elif genre == "wild_card" and model_string != "music_vae":
             raise ValueError("Can't use cool chords with other models!")
@@ -221,12 +222,13 @@ def generate_mm_music(music_dict):
                                                            model_string)
                 music_dicts.append(music_dict)
                 music_dict = copy.deepcopy(music_dict)
-            create_music(model_string, music_dicts, num_generations, genre)
+            create_music(model_string, music_dicts,
+                         num_generations, main_genre)
 
     except Exception as e:
         # if for some reason something fails, give the people what they want.
         # give them the Music Transformer!
         print(e)
         print("---RESORTING TO MUSIC TRANSFORMER---")
-        model = MusicTransformer(genre, is_empty_model=True)
+        model = MusicTransformer(main_genre, is_empty_model=True)
         model.generate()

@@ -15,6 +15,7 @@ if __name__ == '__main__':
         'genre': args.genre,
         'num_generations': args.numgenerations
     }
+
     if music_dict['genre'] == 'random':
         keys = list(C.GENRE_BUCKETS.keys())
         genre_selection = np.random.choice(keys)
@@ -23,12 +24,14 @@ if __name__ == '__main__':
     if music_dict['genre'] != 'wild_card':
         if music_dict['genre'] not in list(C.GENRE_BUCKETS.keys()):
             raise KeyError("Genre not found in keys!")
-
+        main_genre = music_dict['genre']
         bucket = C.GENRE_BUCKETS[music_dict['genre']]
         genre = np.random.choice(bucket)
         music_dict['genre'] = genre
+    else:
+        main_genre = 'wild_card'
     print(music_dict)
-    generate_mm_music(music_dict)
+    generate_mm_music(music_dict, main_genre)
 
 """
 names:
