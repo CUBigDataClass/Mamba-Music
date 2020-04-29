@@ -4,14 +4,16 @@ from sandbox import (
     generate_mm_music
 )
 import const as C
+from ai_parser import parse_ai_service_arguments
 
 if __name__ == '__main__':
+    args = parse_ai_service_arguments()
     music_dict = {
-        'temperature': 1.0,
-        'length': 1.0,
-        'artist': 'music_transformer',
-        'genre': 'wild_card',
-        'num_generations': 1
+        'temperature': args.temperature,
+        'length': args.length,
+        'artist': args.artist,
+        'genre': args.genre,
+        'num_generations': args.numgenerations
     }
     if music_dict['genre'] != 'wild_card':
         if music_dict['genre'] not in list(C.GENRE_BUCKETS.keys()):
@@ -20,6 +22,7 @@ if __name__ == '__main__':
         bucket = C.GENRE_BUCKETS[music_dict['genre']]
         genre = np.random.choice(bucket)
         music_dict['genre'] = genre
+
     generate_mm_music(music_dict)
 
 """
