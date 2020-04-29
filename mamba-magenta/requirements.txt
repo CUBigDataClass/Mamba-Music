@@ -1,0 +1,4 @@
+magenta
+numpy
+midi2audio
+boto3
