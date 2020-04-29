@@ -242,11 +242,11 @@ class Player extends React.Component {
           }
 
           <audio ref={ref => (this.player = ref)} id="myAudio" preload="metadata"/>
-          {this.state.userDislikeMusic ? (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={1}/>) : (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={0.6}/>)}
+          {this.state.userDislikeMusic ? (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={1}/>) : (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={0.25}/>)}
           <Previous onPreviousClick={this.onPreviousClick}/>
           {this.state.playing ? <Pause onPlayerClick={this.togglePlayPause} /> : <Play onPlayerClick={this.togglePlayPause}/>}
           <Next onNextClick={this.onNextClick}/>
-          {this.state.userLikeMusic ? (<Like onLikeClick={this.onLikeClick} ButtonOpacity={1}/>) : (<Like onLikeClick={this.onLikeClick} ButtonOpacity={0.6}/>)}
+          {this.state.userLikeMusic ? (<Like onLikeClick={this.onLikeClick} ButtonOpacity={1}/>) : (<Like onLikeClick={this.onLikeClick} ButtonOpacity={0.25}/>)}
         </div>
       </footer>
     );
