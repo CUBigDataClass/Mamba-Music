@@ -14,7 +14,7 @@ Members:
 - [Mackenzie Lobato](https://github.com/mackenzielobato)
 - [Matthew Strong](https://github.com/peasant98)
 
-## To Install and Run
+## Navigation
 
 ### Frontend:
 

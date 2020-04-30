@@ -26,6 +26,15 @@ class Player extends React.Component {
     };
   }
 
+  foo() {
+    window.setInterval(() => {
+      var audio = document.getElementById('myAudio');
+      if (audio.ended === true) {
+        this.onNextClick()
+      } 
+    }, 100)
+  }
+
   componentDidMount() {
     this.updateMusicInfo()
   }
@@ -33,6 +42,11 @@ class Player extends React.Component {
   updateMusicInfo() {
     this.props.musicInfo(this.state.musicInfo)
     this.props.currentMusic(this.state.currentIndex)
+  }
+
+  onComponentUpdate() {
+    this.updateMusicInfo()
+    this.onPrevOrNextClick()
   }
 
   componentDidUpdate(prevProps) {
@@ -70,10 +84,8 @@ class Player extends React.Component {
 
         axios.get(getLink)
         .then((responseGet) => {
-          this.setState({ musicInfo: responseGet.data.ids, currentIndex: 0 }, this.updateMusicInfo)
+          this.setState({ musicInfo: responseGet.data.ids, currentIndex: 0 }, this.onComponentUpdate)
       })
-
-      this.checkLikedDisliked()
     }
     if(prevProps.isUserLoggedIn !== this.props.isUserLoggedIn) {
       const querystring = require('querystring');
@@ -202,19 +214,14 @@ class Player extends React.Component {
     let track = "https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" 
     if(this.state.playing) {
       this.player.src = track 
-      console.log(this.player.duration)
       this.player.play() 
     } else {
       this.player.pause()
     }
+    this.foo()
   }
 
   render() {
-    if(this.state.playing) {
-      var audio = new Audio("https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" )
-      // audio.src = "https://storage.googleapis.com/mamba_songs_bucket/"+this.state.musicInfo[this.state.currentIndex].SongId+".mp3" 
-      console.log(audio.duration)
-    }
     return (
       <footer className="footer">
         <div className="player" >
@@ -234,12 +241,12 @@ class Player extends React.Component {
             )
           }
 
-          <audio ref={ref => (this.player = ref)}/>
-          {this.state.userDislikeMusic ? (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={1}/>) : (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={0.6}/>)}
+          <audio ref={ref => (this.player = ref)} id="myAudio" preload="metadata"/>
+          {this.state.userDislikeMusic ? (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={1}/>) : (<Dislike onDislikeClick={this.onDislikeClick} ButtonOpacity={0.25}/>)}
           <Previous onPreviousClick={this.onPreviousClick}/>
           {this.state.playing ? <Pause onPlayerClick={this.togglePlayPause} /> : <Play onPlayerClick={this.togglePlayPause}/>}
           <Next onNextClick={this.onNextClick}/>
-          {this.state.userLikeMusic ? (<Like onLikeClick={this.onLikeClick} ButtonOpacity={1}/>) : (<Like onLikeClick={this.onLikeClick} ButtonOpacity={0.6}/>)}
+          {this.state.userLikeMusic ? (<Like onLikeClick={this.onLikeClick} ButtonOpacity={1}/>) : (<Like onLikeClick={this.onLikeClick} ButtonOpacity={0.25}/>)}
         </div>
       </footer>
     );

@@ -36,7 +36,7 @@ class App extends React.Component {
 					let url = window.URL.createObjectURL(blob);
           let a = document.createElement('a');
           a.href = url;
-					a.download = 'LegendaryMusic.mp3';
+					a.download = this.props.musicDeets[this.props.currentMusic].title
 					a.click();
 				});
 		});
