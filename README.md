@@ -11,6 +11,7 @@ Our Platform:
 ![alt text](img/example.png "Our Platform")
 
 Members:
+
 - [Aren Dalloul](https://github.com/adalloul0928)
 - [Ayush Khanal](https://github.com/jptboy)
 - [Brian Nguyen](https://github.com/BrianNguyen214)
@@ -56,6 +57,7 @@ pip3 install tensorflow-gpu==1.15.0
 
 To get the Spotify API up and running, first create an app in Spotify.
 Make sure to specify the Spotify client ID and the Spotify client secret.
+
 ```sh
 echo 'export SPOTIFY_CLIENT_ID="<id>"' >> ~/.bashrc
 echo 'export SPOTIFY_CLIENT_SECRET="<id>"' >> ~/.bashrc
@@ -79,8 +81,18 @@ sudo apt-get update && sudo apt-get install google-cloud-sdk
 # to get started
 gcloud init
 
-
 ```
+
+Fluidsynth configurations:
+
+```sh
+mkdir ~/.fluidsynth
+
+cp /usr/share/sounds/sf2/FluidR3_GM.sf2 ~/.fluidsynth/default_sound_font.sf2
+```
+
+If you want to use our awesome Salamander piano soundfount, go [here](https://musescore.org/en/node/240261). Download the sounfdount, and place it in
+`~/.fluidsynth/`.
 
 ```sh
 python3 mamba_magenta_api.py -a <artists> -g <genre> -t <temperature> -l <length> -n <numgenerations>
@@ -90,11 +102,11 @@ python3 mamba_magenta_api.py -a <artists> -g <genre> -t <temperature> -l <length
 
 ### NEW: Neural Transfer
 
-
 ```sh
 cd mamba-magenta/mamba-magenta/neural_style
 ./generate_art.sh
 
 ```
+
 This command will generate pictures and put them in `mamba-magenta/mamba-magenta/neural_style/generated`.
 Make sure to have pictures in `mamba-magenta/mamba-magenta/neural_style/generated` and `mamba-magenta/mamba-magenta/neural_style/content`.
