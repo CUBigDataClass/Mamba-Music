@@ -1,4 +1,5 @@
 magenta
-numpy
 midi2audio
 boto3
+tensorflow_hub
+Pillow

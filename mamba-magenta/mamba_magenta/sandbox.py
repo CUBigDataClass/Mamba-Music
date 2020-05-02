@@ -16,17 +16,6 @@ import copy
 
 
 """
-structure of json:
-
-{
-
-    'artist': str
-    'tempo': int
-    'temperature': int
-    'genre': str
-    'tempo': int
-    'num_steps': int
-}
 Genre is the most important aspect of this message. It isn't directly
 fed into the model, but affects the instrumentation and chordal structure.
 Some artists are lacking than others in the ability for variation, especially
