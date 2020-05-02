@@ -1,23 +1,24 @@
 import tensorflow as tf
 import os
 import uuid
-
+import functools
 import matplotlib.pyplot as plt
-import tensorflow_hub as hub
-import matplotlib as mpl
-mpl.rcParams['figure.figsize'] = (12, 12)
-mpl.rcParams['axes.grid'] = False
-
 import numpy as np
+
 import PIL.Image
 import time
-import functools
 
 import boto3
 
 from boto3.dynamodb.conditions import Key, Attr
 
 from google.cloud import storage
+
+import tensorflow_hub as hub
+import matplotlib as mpl
+mpl.rcParams['figure.figsize'] = (12, 12)
+mpl.rcParams['axes.grid'] = False
+
 
 tf.compat.v1.enable_eager_execution()
 
@@ -120,11 +121,15 @@ class MambaArtGeneration():
         for idx, item in enumerate(items):
             random_style = np.random.choice(self.style)
             print(item)
+            # note - make this random for later,
+            # not just based on content
             content = self.content[idx]
             print(content)
             print("At idx", idx)
             img = self.generate(content, random_style)
             art_id = str(uuid.uuid1())
+            # when generating both song and art jointly,
+            # just one request is needed.
             song_id = item['SongId']
             self.send_put_request(song_id, art_id)
 
@@ -163,4 +168,3 @@ if __name__ == '__main__':
     art_generator = MambaArtGeneration()
     # art_generator.show_random_images()
     art_generator.generate_all()
-
