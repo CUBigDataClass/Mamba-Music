@@ -38,6 +38,7 @@ cd mamba-api
 ### ML Models
 
 Python3.6 or above is required.
+Eventually, these models will be moved into a separate repository as a high level api for some of Tensorflow's Magenta models.
 
 ```sh
 
