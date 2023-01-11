@@ -11,7 +11,7 @@
     "react-bootstrap": "^1.0.1",
     "react-dom": "^16.13.1",
     "react-google-login": "^5.1.10",
-    "react-scripts": "0.9.5",
+    "react-scripts": "5.0.1",
     "react-sticky-footer": "0.1.0-rc3",
     "reactstrap": "^8.4.1",
     "typescript": ""
